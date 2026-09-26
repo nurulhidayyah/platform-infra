@@ -17,6 +17,9 @@ unclassified:
   location:
     # Alamat yang dilihat dari PC lewat SSH port forwarding.
     url: "http://localhost:8090/"
+  gitHubPluginConfig:
+    hookSecretConfigs:
+      - credentialsId: github-webhook-secret
 
 credentials:
   system:
@@ -30,3 +33,35 @@ credentials:
               privateKeySource:
                 directEntry:
                   privateKey: "${readFile:/run/secrets/gitops-deploy-key}"
+          - string:
+              scope: GLOBAL
+              id: github-webhook-secret
+              description: "Secret webhook GitHub"
+              secret: "${GITHUB_WEBHOOK_SECRET}"
+
+# Satu job per repo service. Job dipicu webhook GitHub setiap ada push; isi
+# pipeline-nya ada di Jenkinsfile repo service itu sendiri.
+jobs:
+  - script: |
+      pipelineJob('contoh-hello') {
+        description('Service hello di contoh-dev. Dipicu webhook GitHub setiap push ke main.')
+        properties {
+          pipelineTriggers {
+            triggers {
+              githubPush()
+            }
+          }
+        }
+        definition {
+          cpsScm {
+            scm {
+              git {
+                remote { url('https://github.com/nurulhidayyah/contoh-hello.git') }
+                branch('*/main')
+              }
+            }
+            scriptPath('Jenkinsfile')
+            lightweight(true)
+          }
+        }
+      }

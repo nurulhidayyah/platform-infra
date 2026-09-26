@@ -10,6 +10,14 @@ credentials-file: /home/nskuy/.cloudflared/<tunnel-id>.json
 ingress:
   - hostname: ssh.hostingskuy.cloud
     service: ssh://localhost:22
+  # Webhook GitHub ke Jenkins. Hanya path ini yang diteruskan; path lain di
+  # hostname ini dijawab 404, jadi tampilan Jenkins tidak terjangkau dari
+  # internet. Setiap kiriman diperiksa tanda tangannya dengan secret webhook.
+  - hostname: platform-webhook.hostingskuy.cloud
+    path: ^/github-webhook/$
+    service: http://127.0.0.1:8090
+  - hostname: platform-webhook.hostingskuy.cloud
+    service: http_status:404
   # Semua hostname lain yang record DNS-nya menunjuk ke tunnel diteruskan ke
   # Traefik, yang memilih aplikasinya lewat Ingress dan menjawab 404 untuk
   # hostname yang tidak dikenalnya. Project baru cukup dibuatkan record DNS:
