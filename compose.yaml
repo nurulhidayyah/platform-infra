@@ -155,6 +155,44 @@ services:
       retries: 20
       start_period: 60s
 
+  node-exporter:
+    image: prom/node-exporter:v1.12.1
+    container_name: platform-node-exporter
+    restart: unless-stopped
+    network_mode: host
+    pid: host
+    command:
+      - --path.rootfs=/host
+      - --web.listen-address=127.0.0.1:9100
+    volumes:
+      - /:/host:ro,rslave
+    mem_limit: 64m
+
+  prometheus:
+    image: prom/prometheus:v3.15.0
+    container_name: platform-prometheus
+    restart: unless-stopped
+    # Network host: API k3s di 127.0.0.1:6443 dan IP pod terjangkau langsung.
+    network_mode: host
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      # Dibatasi waktu dan ukuran, supaya tidak ikut mengisi disk bersama.
+      - --storage.tsdb.retention.time=15d
+      - --storage.tsdb.retention.size=2GB
+      - --web.listen-address=127.0.0.1:9090
+      - --web.enable-lifecycle
+    volumes:
+      - prometheus_data:/prometheus
+      - ./prometheus:/etc/prometheus:ro
+      - ./secrets/k8s:/etc/prometheus-k8s:ro
+    mem_limit: 512m
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:9090/-/ready"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+
 volumes:
   postgres_data:
   mysql_data:
@@ -163,6 +201,7 @@ volumes:
   garage_data:
   registry_data:
   jenkins_home:
+  prometheus_data:
 
 networks:
   default:

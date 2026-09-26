@@ -75,8 +75,10 @@ hidup, tanpa menunggu k3s, dan tidak bisa dijangkau dari internet.
 | 3909 | garage-webui | wajib login; kata sandi di baris pertama `env/garage-webui.env` |
 | 5000 | registry image | hanya 127.0.0.1; k3s menariknya dari sini tanpa `registries.yaml` |
 | 8090 | Jenkins | network host, diikat ke 127.0.0.1; wajib login `admin` |
+| 9090 | Prometheus | network host, diikat ke 127.0.0.1 |
+| 9100 | node-exporter | network host, diikat ke 127.0.0.1 |
 
-Port Prometheus, Grafana, dan Jaeger ditetapkan saat komponennya
+Port Grafana dan Jaeger ditetapkan saat komponennya
 dipasang, dan ditambahkan ke tabel ini.
 
 ClusterIP tetap di k3s. Host VPS bisa merutekan alamat ini, jadi PC bisa
@@ -101,7 +103,9 @@ registry/config.yml            registry image; penghapusan diaktifkan untuk garb
 scripts/registry-gc.sh         membuang blob yang tidak dirujuk tag mana pun
 jenkins/                       image Jenkins (plugin dipin) dan konfigurasinya sebagai kode
 scripts/jenkins-key.sh         kunci SSH Jenkins untuk menulis ke platform-gitops
-secrets/                       kunci privat; di-gitignore
+secrets/                       kunci privat dan token Prometheus; di-gitignore
+prometheus/                    config, aturan alert, dan uji alertnya
+scripts/k8s-prometheus-token.sh  token baca-saja Prometheus dari cluster
 pc/ssh-config.example          contoh ~/.ssh/config untuk PC
 k3s/config.yaml                konfigurasi k3s: servicelb mati, Secret terenkripsi
 k3s/traefik-config.yaml        Traefik di ClusterIP 10.43.0.80, tanpa port host
@@ -163,6 +167,24 @@ Kata sandi awal user `admin`:
 
 ```
 kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath='{.data.password}' | base64 -d; echo
+```
+
+## Pengamatan
+
+Prometheus berjalan di luar cluster (network host) dan membaca k3s lewat
+ServiceAccount baca-saja yang dikelola di platform-gitops (`platform/`).
+`make up` menyalin token-nya ke `secrets/k8s/` lebih dulu.
+
+Setiap deret wajib punya label `env`, `project`, dan `service`. Untuk pod di
+namespace `<project>-<env>`, label diturunkan dari nama namespace; untuk
+komponen platform, `project=platform`. Pod aplikasi di-scrape kalau memberi
+anotasi `prometheus.io/scrape: "true"`, `prometheus.io/port`, dan
+`prometheus.io/path`.
+
+Aturan alert diuji dengan deret buatan, tanpa harus benar-benar mengisi disk:
+
+```
+make test-alerts
 ```
 
 ## Object storage

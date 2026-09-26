@@ -2,7 +2,7 @@
 COMPOSE := docker compose
 
 # `env` juga nama direktori; tanpa .PHONY make menganggapnya sudah dibuat.
-.PHONY: help env up down ps logs tenant-create tenant-delete tenant-secret test-isolation test-namespace registry-gc
+.PHONY: help env up down ps logs tenant-create tenant-delete tenant-secret test-isolation test-namespace registry-gc k8s-token test-alerts
 
 help: ## Tampilkan daftar perintah
 	@grep -E '^[a-zA-Z0-9_-]+:.*## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*## "} {printf "  %-16s %s\n", $$1, $$2}'
@@ -12,7 +12,7 @@ env: ## Buat env/*.env dari contohnya, dengan kata sandi acak; tidak menimpa
 	@scripts/webui-env.sh
 	@scripts/jenkins-key.sh
 
-up: env ## Nyalakan backing services, tunggu sampai sehat, siapkan Garage
+up: env k8s-token ## Nyalakan backing services, tunggu sampai sehat, siapkan Garage
 	$(COMPOSE) up -d --wait --build
 	@scripts/garage-init.sh
 
@@ -42,3 +42,9 @@ test-namespace: ## Buktikan isolasi jaringan namespace k3s: NS=worklog-dev
 
 registry-gc: ## Buang blob registry yang tidak dirujuk tag mana pun
 	@scripts/registry-gc.sh
+
+k8s-token: ## Salin token Prometheus dari cluster ke secrets/k8s/
+	@scripts/k8s-prometheus-token.sh
+
+test-alerts: ## Uji aturan alert Prometheus dengan deret buatan
+	@docker run --rm -v $(CURDIR)/prometheus:/p:ro -w /p/tests --entrypoint promtool prom/prometheus:v3.15.0 test rules platform.test.yml

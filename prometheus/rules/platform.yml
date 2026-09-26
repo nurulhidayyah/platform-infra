@@ -1,0 +1,16 @@
+groups:
+  - name: platform
+    rules:
+      # Disk / dipakai bersama Postgres, registry, volume Prometheus, dan dua
+      # aplikasi lain. Disk penuh menghentikan Postgres, jadi peringatannya
+      # jauh sebelum itu.
+      - alert: DiskHampirPenuh
+        expr: |
+          1 - node_filesystem_avail_bytes{mountpoint="/"}
+            / node_filesystem_size_bytes{mountpoint="/"} > 0.75
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Disk / terisi {{ $value | humanizePercentage }}"
+          description: "Jalankan make registry-gc, periksa volume Docker, dan log."

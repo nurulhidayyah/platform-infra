@@ -1,0 +1,35 @@
+# Uji aturan alert tanpa harus benar-benar mengisi disk:
+#   make test-alerts
+rule_files:
+  - ../rules/platform.yml
+evaluation_interval: 1m
+tests:
+  # 80% terisi selama 15 menit: alert menyala setelah 10 menit.
+  - interval: 1m
+    input_series:
+      - series: 'node_filesystem_size_bytes{mountpoint="/", env="dev", project="platform", service="node"}'
+        values: "100x15"
+      - series: 'node_filesystem_avail_bytes{mountpoint="/", env="dev", project="platform", service="node"}'
+        values: "20x15"
+    alert_rule_test:
+      - eval_time: 5m
+        alertname: DiskHampirPenuh
+        exp_alerts: []
+      - eval_time: 12m
+        alertname: DiskHampirPenuh
+        exp_alerts:
+          - exp_labels: { severity: warning, mountpoint: "/", env: dev, project: platform, service: node }
+            exp_annotations:
+              summary: "Disk / terisi 80%"
+              description: "Jalankan make registry-gc, periksa volume Docker, dan log."
+  # 70% terisi: tidak pernah menyala.
+  - interval: 1m
+    input_series:
+      - series: 'node_filesystem_size_bytes{mountpoint="/", env="dev", project="platform", service="node"}'
+        values: "100x15"
+      - series: 'node_filesystem_avail_bytes{mountpoint="/", env="dev", project="platform", service="node"}'
+        values: "30x15"
+    alert_rule_test:
+      - eval_time: 15m
+        alertname: DiskHampirPenuh
+        exp_alerts: []
