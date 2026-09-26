@@ -13,7 +13,7 @@ env: ## Buat env/*.env dari contohnya, dengan kata sandi acak; tidak menimpa
 	@scripts/jenkins-key.sh
 
 up: env ## Nyalakan backing services, tunggu sampai sehat, siapkan Garage
-	$(COMPOSE) up -d --wait
+	$(COMPOSE) up -d --wait --build
 	@scripts/garage-init.sh
 
 down: ## Matikan backing services; data di volume tetap
