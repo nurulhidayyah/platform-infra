@@ -10,7 +10,9 @@
 //   port              port container untuk uji asap, bawaan 8080
 //
 // Cara membangun dipilih dari isi repo: pom.xml berarti Maven + Jib, Dockerfile
-// berarti docker build. Semua branch diuji; hanya main yang mendorong image dan
+// berarti docker build. Maven jalan dengan settings.xml sementara yang memuat
+// kredensial `github-packages` sebagai server `github`, untuk repo yang menarik
+// library dari GitHub Packages. Semua branch diuji; hanya main yang mendorong image dan
 // men-deploy. Deploy = menyalin folder deploy/ repo service ke
 // platform-gitops/services/<project>-<env>/<service>/ beserta kustomization.yaml
 // yang menetapkan namespace dan image. Manifest di deploy/ menulis image sebagai
@@ -55,11 +57,29 @@ def call(Map cfg = [:]) {
         when { environment name: 'BUILD_KIND', value: 'maven' }
         steps {
           script {
-            if (env.BRANCH_NAME == 'main') {
-              // Jib mendorong image langsung ke registry, tanpa Docker.
-              sh "./mvnw -B verify jib:build -Djib.to.image=${repo}:${env.TAG} -Djib.allowInsecureRegistries=true"
-            } else {
-              sh './mvnw -B verify'
+            // settings.xml sementara hanya berisi server `github` untuk GitHub
+            // Packages. Isinya merujuk variabel lingkungan, jadi token tidak
+            // pernah tertulis ke disk; repo yang tidak menarik dari GitHub
+            // Packages tidak memakai server itu sama sekali.
+            String settings = "${pwd(tmp: true)}/maven-settings.xml"
+            writeFile file: settings, text: '''<settings>
+  <servers>
+    <server>
+      <id>github</id>
+      <username>${env.GITHUB_PACKAGES_USER}</username>
+      <password>${env.GITHUB_PACKAGES_TOKEN}</password>
+    </server>
+  </servers>
+</settings>
+'''
+            withCredentials([usernamePassword(credentialsId: 'github-packages',
+                usernameVariable: 'GITHUB_PACKAGES_USER', passwordVariable: 'GITHUB_PACKAGES_TOKEN')]) {
+              if (env.BRANCH_NAME == 'main') {
+                // Jib mendorong image langsung ke registry, tanpa Docker.
+                sh "./mvnw -B -s '${settings}' verify jib:build -Djib.to.image=${repo}:${env.TAG} -Djib.allowInsecureRegistries=true"
+              } else {
+                sh "./mvnw -B -s '${settings}' verify"
+              }
             }
           }
         }

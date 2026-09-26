@@ -65,6 +65,16 @@ credentials:
               id: github-webhook-secret
               description: "Secret webhook GitHub"
               secret: "${GITHUB_WEBHOOK_SECRET}"
+          # Membaca library Maven bersama dari GitHub Packages. Token classic
+          # dengan scope read:packages saja, diisi di env/jenkins.env. Kosong pun
+          # Jenkins tetap start; hanya repo yang menarik dari GitHub Packages
+          # yang gagal mengunduh.
+          - usernamePassword:
+              scope: GLOBAL
+              id: github-packages
+              username: nurulhidayyah
+              password: "${GITHUB_PACKAGES_TOKEN:-}"
+              description: "GitHub Packages (read:packages)"
 
 # Satu folder yang memindai akun GitHub. Setiap repo yang punya Jenkinsfile
 # otomatis menjadi job, dengan satu cabang job per branch dan pull request;
