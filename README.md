@@ -78,9 +78,9 @@ hidup, tanpa menunggu k3s, dan tidak bisa dijangkau dari internet.
 | 9090 | Prometheus | network host, diikat ke 127.0.0.1 |
 | 9100 | node-exporter | network host, diikat ke 127.0.0.1 |
 | 3000 | Grafana | network host, diikat ke 127.0.0.1; wajib login `admin` |
+| 16686 | tampilan Jaeger | |
+| 4318 | Jaeger, OTLP HTTP | juga di 172.30.0.1 untuk pod |
 
-Port Jaeger ditetapkan saat komponennya
-dipasang, dan ditambahkan ke tabel ini.
 
 ClusterIP tetap di k3s. Host VPS bisa merutekan alamat ini, jadi PC bisa
 menjangkaunya lewat `LocalForward`:
@@ -107,6 +107,7 @@ scripts/jenkins-key.sh         kunci SSH Jenkins untuk menulis ke platform-gitop
 secrets/                       kunci privat dan token Prometheus; di-gitignore
 prometheus/                    config, aturan alert, dan uji alertnya
 grafana/                       sumber data dan dashboard sebagai kode
+jaeger/config.yaml             Jaeger v2, penyimpanan memori berbatas
 scripts/k8s-prometheus-token.sh  token baca-saja Prometheus dari cluster
 pc/ssh-config.example          contoh ~/.ssh/config untuk PC
 k3s/config.yaml                konfigurasi k3s: servicelb mati, Secret terenkripsi

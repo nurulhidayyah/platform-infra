@@ -220,6 +220,20 @@ services:
       timeout: 5s
       retries: 10
 
+  jaeger:
+    image: jaegertracing/jaeger:2.21.0
+    container_name: platform-jaeger
+    restart: unless-stopped
+    command: ["--config", "/etc/jaeger/config.yaml"]
+    ports:
+      - "127.0.0.1:16686:16686"   # tampilan Jaeger
+      # OTLP HTTP: dari PC lewat SSH port forwarding, dan dari pod di k3s.
+      - "127.0.0.1:4318:4318"
+      - "172.30.0.1:4318:4318"
+    volumes:
+      - ./jaeger/config.yaml:/etc/jaeger/config.yaml:ro
+    mem_limit: 256m
+
 volumes:
   postgres_data:
   mysql_data:

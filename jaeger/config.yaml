@@ -1,0 +1,39 @@
+# Jaeger v2 (berbasis OpenTelemetry Collector), satu proses, penyimpanan di
+# memori. Trace hilang saat restart, dan jumlahnya dibatasi supaya memori tidak
+# tumbuh tanpa batas: untuk Dev, trace dipakai untuk melihat perilaku terkini.
+service:
+  extensions: [jaeger_storage, jaeger_query, healthcheckv2]
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [jaeger_storage_exporter]
+
+extensions:
+  healthcheckv2:
+    use_v2: true
+    http:
+      endpoint: 0.0.0.0:13133
+  jaeger_query:
+    storage:
+      traces: memstore
+    ui:
+      config_file: ""
+  jaeger_storage:
+    backends:
+      memstore:
+        memory:
+          max_traces: 20000
+
+receivers:
+  otlp:
+    protocols:
+      http:
+        endpoint: 0.0.0.0:4318
+
+processors:
+  batch: {}
+
+exporters:
+  jaeger_storage_exporter:
+    trace_storage: memstore

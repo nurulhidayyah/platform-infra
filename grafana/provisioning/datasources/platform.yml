@@ -1,5 +1,15 @@
 # Sumber data dipasang dari berkas ini saat Grafana start; tidak diubah lewat UI.
+#
+# Jaeger sengaja tidak dipasang di sini: Jaeger 2.21 hanya menyediakan API v3,
+# sedangkan sumber data Jaeger di Grafana masih memakai /api/services yang sudah
+# dibuang (404, juga dengan konfigurasi bawaan Jaeger). Trace dilihat di UI
+# Jaeger sendiri.
 apiVersion: 1
+# Menghapus sumber data dari daftar di bawah tidak menghapusnya dari Grafana;
+# penghapusannya harus ditulis di sini.
+deleteDatasources:
+  - name: Jaeger
+    orgId: 1
 datasources:
   - name: Prometheus
     uid: prometheus
