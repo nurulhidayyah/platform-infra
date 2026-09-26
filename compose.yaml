@@ -145,6 +145,7 @@ services:
       - jenkins_home:/var/jenkins_home
       - ./jenkins/casc:/casc:ro
       - ./secrets/gitops-deploy-key:/run/secrets/gitops-deploy-key:ro
+      - ./secrets/timesheet-app-deploy-key:/run/secrets/timesheet-app-deploy-key:ro
       - /var/run/docker.sock:/var/run/docker.sock
     cpus: 2
     mem_limit: 1536m

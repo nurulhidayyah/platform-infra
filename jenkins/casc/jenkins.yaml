@@ -33,6 +33,14 @@ credentials:
               privateKeySource:
                 directEntry:
                   privateKey: "${readFile:/run/secrets/gitops-deploy-key}"
+          - basicSSHUserPrivateKey:
+              scope: GLOBAL
+              id: timesheet-app-deploy-key
+              username: git
+              description: "Deploy key timesheet-app (baca)"
+              privateKeySource:
+                directEntry:
+                  privateKey: "${readFile:/run/secrets/timesheet-app-deploy-key}"
           - string:
               scope: GLOBAL
               id: github-webhook-secret
@@ -78,7 +86,10 @@ jobs:
           cpsScm {
             scm {
               git {
-                remote { url('https://github.com/nurulhidayyah/timesheet-app.git') }
+                remote {
+                  url('git@github.com:nurulhidayyah/timesheet-app.git')
+                  credentials('timesheet-app-deploy-key')
+                }
                 branch('*/main')
               }
             }
