@@ -176,6 +176,13 @@ Yang tetap langkah tangan, sekali saja:
   dan hostname-nya lewat `cloudflared tunnel route dns`;
 - service yang butuh data: `make tenant-create` lalu `make tenant-secret`.
 
+Library Maven dari GitHub Packages: deklarasikan repository dengan id `github`
+di `pom.xml`. Pipeline menjalankan Maven dengan `settings.xml` sementara yang
+mengisi server `github` dari kredensial Jenkins `github-packages` (user
+`nurulhidayyah`, token classic ber-scope `read:packages` saja di
+`GITHUB_PACKAGES_TOKEN`, `env/jenkins.env`, lalu `make up`). Repo yang tidak
+memakai GitHub Packages tidak terpengaruh.
+
 Resep `servicePipeline` dibaca dari branch `main` repo ini. Kunci privat App
 disimpan di `secrets/github-app-pkcs8.pem` (PKCS#8, yang diminta Jenkins):
 
