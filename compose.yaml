@@ -193,6 +193,33 @@ services:
       timeout: 5s
       retries: 10
 
+  grafana:
+    image: grafana/grafana:13.2.2
+    container_name: platform-grafana
+    restart: unless-stopped
+    # Network host supaya Prometheus (127.0.0.1:9090) terjangkau; tampilannya
+    # tetap hanya di 127.0.0.1:3000, dibuka dari PC lewat SSH port forwarding.
+    network_mode: host
+    env_file: env/grafana.env
+    environment:
+      GF_SERVER_HTTP_ADDR: 127.0.0.1
+      GF_SERVER_HTTP_PORT: "3000"
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+      GF_ANALYTICS_REPORTING_ENABLED: "false"
+      GF_ANALYTICS_CHECK_FOR_UPDATES: "false"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+    # 256m terlalu sempit: Grafana 13 sudah memakai ~244 MiB saat baru start.
+    mem_limit: 384m
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:3000/api/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+
 volumes:
   postgres_data:
   mysql_data:
@@ -202,6 +229,7 @@ volumes:
   registry_data:
   jenkins_home:
   prometheus_data:
+  grafana_data:
 
 networks:
   default:

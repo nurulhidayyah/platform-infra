@@ -77,8 +77,9 @@ hidup, tanpa menunggu k3s, dan tidak bisa dijangkau dari internet.
 | 8090 | Jenkins | network host, diikat ke 127.0.0.1; wajib login `admin` |
 | 9090 | Prometheus | network host, diikat ke 127.0.0.1 |
 | 9100 | node-exporter | network host, diikat ke 127.0.0.1 |
+| 3000 | Grafana | network host, diikat ke 127.0.0.1; wajib login `admin` |
 
-Port Grafana dan Jaeger ditetapkan saat komponennya
+Port Jaeger ditetapkan saat komponennya
 dipasang, dan ditambahkan ke tabel ini.
 
 ClusterIP tetap di k3s. Host VPS bisa merutekan alamat ini, jadi PC bisa
@@ -105,6 +106,7 @@ jenkins/                       image Jenkins (plugin dipin) dan konfigurasinya s
 scripts/jenkins-key.sh         kunci SSH Jenkins untuk menulis ke platform-gitops
 secrets/                       kunci privat dan token Prometheus; di-gitignore
 prometheus/                    config, aturan alert, dan uji alertnya
+grafana/                       sumber data dan dashboard sebagai kode
 scripts/k8s-prometheus-token.sh  token baca-saja Prometheus dari cluster
 pc/ssh-config.example          contoh ~/.ssh/config untuk PC
 k3s/config.yaml                konfigurasi k3s: servicelb mati, Secret terenkripsi
