@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
-# Jatah tenant: satu perintah membuat database dan role, user Redis, dan berkas
-# kredensial untuk satu service di satu environment. Aturan nama: README.
+# Jatah tenant: satu perintah membuat database dan role, user Redis, bucket S3,
+# dan berkas kredensial untuk satu service di satu environment. Aturan nama:
+# README.
 set -euo pipefail
 
 root="$(cd "$(dirname "$0")/.." && pwd)"
@@ -13,7 +14,7 @@ Pemakaian:
   tenant.sh create <project> <service> <env> <jatah>...
   CONFIRM=yes tenant.sh delete <project> <service> <env>
 
-Jatah: postgres, mysql, redis
+Jatah: postgres, mysql, redis, s3
 Contoh: tenant.sh create worklog identity dev postgres redis
 USAGE
   exit 2
@@ -29,7 +30,7 @@ done
 [[ $env == dev || $env == prod ]] || { echo "env harus dev atau prod, bukan '$env'" >&2; exit 2; }
 
 sql_name="${project}_${service}_${env}"   # database dan role
-dash_name="${project}-${service}-${env}"  # user Redis, nama berkas
+dash_name="${project}-${service}-${env}"  # user Redis, bucket dan kunci S3, nama berkas
 key_prefix="${project}:${service}:"
 cred_file="$tenants/$dash_name.env"
 (( ${#sql_name} <= 32 )) || { echo "'$sql_name' lebih dari 32 karakter, batas nama user MySQL" >&2; exit 2; }
@@ -45,6 +46,14 @@ mysql_admin() {
 redis_admin() {
   "${compose[@]}" exec -T redis sh -c 'redis-cli --no-auth-warning --user default --pass "$REDIS_PASSWORD" "$@"' redis-cli "$@"
 }
+garage() {
+  "${compose[@]}" exec -T -e RUST_LOG=warn garage /garage "$@"
+}
+key_field() {  # key_field <nama kunci> <"Key ID"|"Secret key">
+  garage key info "$1" --show-secret | awk -F': *' -v f="$2" '$1 == f {print $2}'
+}
+# Klien S3 untuk mengosongkan bucket; versinya dipin seperti image lain.
+rclone_image=rclone/rclone:1.71.2
 
 create_postgres() {
   local pw; pw=$(password)
@@ -74,10 +83,35 @@ create_redis() {
   printf 'REDIS_USER=%s\nREDIS_PASSWORD=%s\nREDIS_KEY_PREFIX=%s\nREDIS_PORT=6379\n' "$dash_name" "$pw" "$key_prefix" >> "$cred_file"
 }
 
+create_s3() {
+  garage bucket create "$dash_name" >/dev/null
+  garage key create "$dash_name" >/dev/null
+  garage bucket allow --read --write --owner "$dash_name" --key "$dash_name" >/dev/null
+  garage bucket allow --read --write --owner "$dash_name" --key platform-admin >/dev/null
+  # Kuota melindungi disk bersama dari satu tenant yang kebablasan.
+  garage bucket set-quotas --max-size 5GiB "$dash_name" >/dev/null
+  printf 'S3_BUCKET=%s\nS3_ACCESS_KEY=%s\nS3_SECRET_KEY=%s\nS3_REGION=garage\nS3_PORT=3900\nS3_PATH_STYLE=true\n' \
+    "$dash_name" "$(key_field "$dash_name" 'Key ID')" "$(key_field "$dash_name" 'Secret key')" >> "$cred_file"
+}
+
+delete_s3() {
+  if garage bucket info "$dash_name" >/dev/null 2>&1; then
+    docker run --rm --network platform "$rclone_image" --retries 1 --low-level-retries 1 \
+      --s3-provider Other --s3-endpoint http://platform-garage:3900 --s3-region garage --s3-force-path-style \
+      --s3-access-key-id "$(key_field platform-admin 'Key ID')" \
+      --s3-secret-access-key "$(key_field platform-admin 'Secret key')" \
+      delete ":s3:$dash_name" >/dev/null 2>&1
+    garage bucket delete --yes "$dash_name" >/dev/null
+  fi
+  if garage key info "$dash_name" >/dev/null 2>&1; then
+    garage key delete --yes "$dash_name" >/dev/null
+  fi
+}
+
 create() {
   [[ $# -ge 1 ]] || usage
   for r in "$@"; do
-    [[ $r == postgres || $r == mysql || $r == redis ]] || { echo "jatah '$r' tidak dikenal" >&2; exit 2; }
+    [[ $r == postgres || $r == mysql || $r == redis || $r == s3 ]] || { echo "jatah '$r' tidak dikenal" >&2; exit 2; }
   done
   [[ ! -e $cred_file ]] || { echo "tenant $dash_name sudah ada: $cred_file" >&2; exit 1; }
   mkdir -p "$tenants"
@@ -97,6 +131,7 @@ create() {
 delete() {
   [[ ${CONFIRM:-} == yes ]] || { echo "menghapus $dash_name beserta seluruh datanya; ulangi dengan CONFIRM=yes" >&2; exit 1; }
   psql_admin <<SQL
+SET client_min_messages = warning;
 DROP DATABASE IF EXISTS "$sql_name" WITH (FORCE);
 DROP ROLE IF EXISTS "$sql_name";
 SQL
@@ -110,6 +145,7 @@ SQL
     redis-cli $auth ACL DELUSER "$2" >/dev/null
     redis-cli $auth ACL SAVE >/dev/null
   ' sh "$key_prefix" "$dash_name"
+  delete_s3
   rm -f "$cred_file"
   echo "dihapus $dash_name"
 }

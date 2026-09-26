@@ -56,10 +56,32 @@ services:
       timeout: 5s
       retries: 5
 
+  garage:
+    image: dxflrs/garage:v2.1.0
+    container_name: platform-garage
+    restart: unless-stopped
+    env_file: env/garage.env
+    ports:
+      # Hanya API S3. RPC (3901) dan admin (3903) tidak dibuka ke host.
+      - "127.0.0.1:3900:3900"
+    volumes:
+      - garage_meta:/var/lib/garage/meta
+      - garage_data:/var/lib/garage/data
+      - ./garage/garage.toml:/etc/garage.toml:ro
+    mem_limit: 256m
+    healthcheck:
+      # Image-nya tanpa shell, jadi binary garage sendiri yang memeriksa.
+      test: ["CMD", "/garage", "status"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
 volumes:
   postgres_data:
   mysql_data:
   redis_data:
+  garage_meta:
+  garage_data:
 
 networks:
   default:

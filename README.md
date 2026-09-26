@@ -67,7 +67,7 @@ Semua komponen platform mendengar di `127.0.0.1`, kecuali disebut lain.
 | 5432 | Postgres platform | |
 | 3307 | MySQL platform | 3306 sudah terpakai |
 | 6379 | Redis | |
-| 9000, 9001 | object storage (S3) | komponennya belum dipilih |
+| 3900 | Garage, API S3 | RPC 3901 dan admin 3903 tidak dibuka ke host |
 | 5000 | registry image | |
 
 Port Jenkins, Prometheus, Grafana, Jaeger, dan Argo CD ditetapkan saat
@@ -76,10 +76,12 @@ komponennya dipasang, dan ditambahkan ke tabel ini.
 ## Susunan
 
 ```
-compose.yaml                   backing services: Postgres, MySQL, Redis
+compose.yaml                   backing services: Postgres, MySQL, Redis, Garage
 env/<komponen>.env.example     contoh konfigurasi; `make env` membuat versi aslinya
 postgres/init/                 SQL yang jalan sekali, saat volume Postgres masih baru
 redis/entrypoint.sh            menyiapkan aclfile sebelum Redis start
+garage/garage.toml             konfigurasi Garage tanpa rahasia
+scripts/garage-init.sh         layout satu node dan kunci platform-admin
 scripts/tenant.sh              jatah tenant
 scripts/test-isolation.sh      bukti bahwa dua tenant tidak bisa saling membaca
 tenants/                       kredensial hasil jatah tenant; di-gitignore
@@ -103,6 +105,16 @@ alamatnya host yang terlihat dari cluster.
 
 `make tenant-delete` menghapus database, user, dan seluruh datanya, jadi harus
 disertai `CONFIRM=yes`.
+
+## Object storage
+
+Object storage memakai [Garage](https://garagehq.deuxfleurs.fr/), bukan
+MinIO: image resmi MinIO sudah tidak diterbitkan lagi, dan tag yang dulu
+dipakai tidak bisa ditarik dari Docker Hub maupun quay.io. Service tetap
+berbicara lewat API S3, jadi kodenya tidak bergantung pada Garage.
+
+Klien S3 harus memakai path-style dan region `garage`. Setiap bucket tenant
+dibatasi kuota 5 GiB supaya satu tenant tidak bisa mengisi disk bersama.
 
 ## Branch
 

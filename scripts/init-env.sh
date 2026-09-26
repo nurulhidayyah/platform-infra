@@ -14,7 +14,7 @@ for example in *.env.example; do
   fi
   while IFS= read -r line; do
     while [[ "$line" == *__GENERATE__* ]]; do
-      line="${line/__GENERATE__/$(openssl rand -hex 24)}"
+      line="${line/__GENERATE__/$(openssl rand -hex 32)}"
     done
     printf '%s\n' "$line"
   done < "$example" > "$target"

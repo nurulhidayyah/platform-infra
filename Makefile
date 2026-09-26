@@ -10,8 +10,9 @@ help: ## Tampilkan daftar perintah
 env: ## Buat env/*.env dari contohnya, dengan kata sandi acak; tidak menimpa
 	@scripts/init-env.sh
 
-up: env ## Nyalakan backing services dan tunggu sampai sehat
+up: env ## Nyalakan backing services, tunggu sampai sehat, siapkan Garage
 	$(COMPOSE) up -d --wait
+	@scripts/garage-init.sh
 
 down: ## Matikan backing services; data di volume tetap
 	$(COMPOSE) down
@@ -22,7 +23,7 @@ ps: ## Status container
 logs: ## Ikuti log (Ctrl-C untuk keluar)
 	$(COMPOSE) logs -f
 
-tenant-create: ## Buat jatah: PROJECT= SERVICE= ENV= WITH="postgres mysql redis"
+tenant-create: ## Buat jatah: PROJECT= SERVICE= ENV= WITH="postgres mysql redis s3"
 	@scripts/tenant.sh create $(PROJECT) $(SERVICE) $(ENV) $(WITH)
 
 tenant-delete: ## Hapus jatah beserta datanya: PROJECT= SERVICE= ENV= CONFIRM=yes
