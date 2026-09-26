@@ -144,7 +144,9 @@ alamatnya `172.30.0.1`.
 disertai `CONFIRM=yes`.
 
 `make reset CONFIRM=yes` mengulang semua backing services dari nol: volume
-dihapus, `env/*.env` dibuat ulang dengan kata sandi baru, jatah tenant yang
+dihapus, `env/*.env` dibuat ulang dengan kata sandi baru (kata sandi Jenkins,
+Grafana, garage-webui, Postgres, MySQL, dan Redis ditanyakan lebih dulu; Enter
+berarti acak), jatah tenant yang
 tercatat di `tenants/` dibuat ulang beserta Secret-nya di cluster, lalu
 Jenkins memindai GitHub supaya image dibangun ulang. `GITHUB_WEBHOOK_SECRET`,
 isi `secrets/`, dan semua yang ada di k3s tidak disentuh.

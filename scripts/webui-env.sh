@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Membuat env/garage-webui.env: admin token Garage untuk UI, dan login UI
-# dengan kata sandi acak. Tidak pernah menimpa berkas yang sudah ada.
+# dengan kata sandi acak atau WEBUI_PASSWORD. Tidak pernah menimpa berkas yang
+# sudah ada.
 #
 # UI ini memegang admin token Garage, jadi siapa pun yang membukanya berkuasa
 # penuh atas semua bucket. Login mencegah proses lain di VPS yang bisa
@@ -14,7 +15,8 @@ if [[ -e $target ]]; then
 fi
 # shellcheck disable=SC1091
 source garage.env
-password=$(openssl rand -hex 16)
+# WEBUI_PASSWORD dipakai kalau diisi (make reset menanyakannya); selain itu acak.
+password=${WEBUI_PASSWORD:-$(openssl rand -hex 16)}
 hash=$(python3 -c 'import bcrypt, sys; print(bcrypt.hashpw(sys.argv[1].encode(), bcrypt.gensalt()).decode())' "$password")
 umask 077
 {

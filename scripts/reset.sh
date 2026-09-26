@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Mengulang backing services dari nol dengan kata sandi baru: semua volume
-# Compose dihapus, env/*.env dibuat ulang, jatah tenant yang ada dibuat ulang
+# Compose dihapus, env/*.env dibuat ulang (kata sandi untuk manusia ditanyakan
+# kalau dijalankan dari terminal; Enter berarti acak), jatah tenant yang ada dibuat ulang
 # dengan kredensial baru (termasuk Secret-nya di cluster), lalu Jenkins
 # memindai GitHub supaya image service dibangun ulang ke registry yang kosong.
 #
@@ -37,6 +38,36 @@ for f in tenants/*.env; do
   jatah+=("${name//-/ }|${parts# }")
 done
 
+# Kata sandi untuk manusia boleh ditentukan sendiri, dan ditanyakan sebelum apa
+# pun dihapus; Enter berarti tetap acak. Token mesin (Garage, webhook) selalu
+# acak. Hanya huruf, angka, dan . _ ~ - supaya aman di berkas env, URL
+# koneksi, dan ACL Redis.
+ask() {
+  local key=$1 label=$2 a b
+  while true; do
+    read -rsp "$label (Enter = acak): " a; echo
+    [[ -z $a ]] && return 0
+    if [[ ! $a =~ ^[A-Za-z0-9._~-]{12,}$ ]]; then
+      echo "  minimal 12 karakter, hanya huruf, angka, dan . _ ~ -"
+      continue
+    fi
+    read -rsp "$label (ulangi): " b; echo
+    [[ $a == "$b" ]] || { echo "  tidak sama, coba lagi"; continue; }
+    pw[$key]=$a
+    return 0
+  done
+}
+declare -A pw=()
+if [[ -t 0 ]]; then
+  echo "== kata sandi"
+  ask JENKINS_ADMIN_PASSWORD "Jenkins, user admin"
+  ask GF_SECURITY_ADMIN_PASSWORD "Grafana, user admin"
+  ask WEBUI_PASSWORD "garage-webui, user admin"
+  ask POSTGRES_PASSWORD "Postgres, superuser postgres"
+  ask MYSQL_ROOT_PASSWORD "MySQL, user root"
+  ask REDIS_PASSWORD "Redis, user default"
+fi
+
 echo "== hapus container dan volume"
 docker compose down -v
 rm -f env/*.env tenants/*.env
@@ -44,6 +75,21 @@ rm -f env/*.env tenants/*.env
 echo "== env baru"
 make --no-print-directory env
 sed -i "s/^GITHUB_WEBHOOK_SECRET=.*/GITHUB_WEBHOOK_SECRET=$webhook/" env/jenkins.env
+declare -A file_of=(
+  [JENKINS_ADMIN_PASSWORD]=env/jenkins.env
+  [GF_SECURITY_ADMIN_PASSWORD]=env/grafana.env
+  [POSTGRES_PASSWORD]=env/postgres.env
+  [MYSQL_ROOT_PASSWORD]=env/mysql.env
+  [REDIS_PASSWORD]=env/redis.env
+)
+for key in "${!pw[@]}"; do
+  if [[ $key == WEBUI_PASSWORD ]]; then
+    rm env/garage-webui.env
+    WEBUI_PASSWORD=${pw[$key]} scripts/webui-env.sh
+  else
+    sed -i "s|^$key=.*|$key=${pw[$key]}|" "${file_of[$key]}"
+  fi
+done
 
 echo "== nyalakan"
 make --no-print-directory up
