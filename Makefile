@@ -9,6 +9,7 @@ help: ## Tampilkan daftar perintah
 
 env: ## Buat env/*.env dari contohnya, dengan kata sandi acak; tidak menimpa
 	@scripts/init-env.sh
+	@scripts/webui-env.sh
 
 up: env ## Nyalakan backing services, tunggu sampai sehat, siapkan Garage
 	$(COMPOSE) up -d --wait

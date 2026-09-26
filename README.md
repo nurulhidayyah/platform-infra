@@ -68,6 +68,7 @@ Semua komponen platform mendengar di `127.0.0.1`, kecuali disebut lain.
 | 3307 | MySQL platform | 3306 sudah terpakai |
 | 6379 | Redis | |
 | 3900 | Garage, API S3 | RPC 3901 dan admin 3903 tidak dibuka ke host |
+| 3909 | garage-webui | wajib login; kata sandi di baris pertama `env/garage-webui.env` |
 | 5000 | registry image | |
 
 Port Jenkins, Prometheus, Grafana, Jaeger, dan Argo CD ditetapkan saat
@@ -82,6 +83,8 @@ postgres/init/                 SQL yang jalan sekali, saat volume Postgres masih
 redis/entrypoint.sh            menyiapkan aclfile sebelum Redis start
 garage/garage.toml             konfigurasi Garage tanpa rahasia
 scripts/garage-init.sh         layout satu node dan kunci platform-admin
+scripts/webui-env.sh           login dan admin token untuk garage-webui
+pc/ssh-config.example          contoh ~/.ssh/config untuk PC
 scripts/tenant.sh              jatah tenant
 scripts/test-isolation.sh      bukti bahwa dua tenant tidak bisa saling membaca
 tenants/                       kredensial hasil jatah tenant; di-gitignore
@@ -113,7 +116,8 @@ MinIO: image resmi MinIO sudah tidak diterbitkan lagi, dan tag yang dulu
 dipakai tidak bisa ditarik dari Docker Hub maupun quay.io. Service tetap
 berbicara lewat API S3, jadi kodenya tidak bergantung pada Garage.
 
-Klien S3 harus memakai path-style dan region `garage`. Setiap bucket tenant
+Untuk melihat isi bucket, buka garage-webui di `http://localhost:3909` lewat
+SSH port forwarding. Klien S3 harus memakai path-style dan region `garage`. Setiap bucket tenant
 dibatasi kuota 5 GiB supaya satu tenant tidak bisa mengisi disk bersama.
 
 ## Branch

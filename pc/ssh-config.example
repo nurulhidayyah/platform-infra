@@ -1,0 +1,16 @@
+# Tempel ke ~/.ssh/config di PC (Git Bash: /c/Users/<nama>/.ssh/config), ganti
+# <alamat-vps>, lalu jalankan `ssh -N vps-dev`. Selama perintah itu jalan,
+# komponen platform terlihat di localhost PC. Tambah satu LocalForward setiap
+# ada komponen baru; port-nya ada di tabel port README.
+Host vps-dev
+    HostName <alamat-vps>
+    User nskuy
+    LocalForward 5432 127.0.0.1:5432
+    LocalForward 3307 127.0.0.1:3307
+    LocalForward 6379 127.0.0.1:6379
+    LocalForward 3900 127.0.0.1:3900
+    LocalForward 3909 127.0.0.1:3909
+    # Gagal keras kalau satu port lokal sudah terpakai, bukan diam-diam hilang.
+    ExitOnForwardFailure yes
+    ServerAliveInterval 30
+    ServerAliveCountMax 3

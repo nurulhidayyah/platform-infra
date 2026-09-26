@@ -76,6 +76,25 @@ services:
       timeout: 5s
       retries: 5
 
+  garage-webui:
+    # UI komunitas untuk Garage: bucket, kunci, kuota, dan penjelajah objek.
+    image: khairul169/garage-webui:1.1.0
+    container_name: platform-garage-webui
+    restart: unless-stopped
+    env_file: env/garage-webui.env
+    environment:
+      API_BASE_URL: http://platform-garage:3903
+      S3_ENDPOINT_URL: http://platform-garage:3900
+      S3_REGION: garage
+    ports:
+      - "127.0.0.1:3909:3909"
+    volumes:
+      - ./garage/garage.toml:/etc/garage.toml:ro
+    mem_limit: 64m
+    depends_on:
+      garage:
+        condition: service_healthy
+
 volumes:
   postgres_data:
   mysql_data:
