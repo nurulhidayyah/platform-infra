@@ -3,6 +3,8 @@
 jenkins:
   systemMessage: "Jenkins platform Dev. Konfigurasinya di platform-infra/jenkins/casc."
   numExecutors: 2
+  # Tanpa agent; lihat JENKINS_SLAVE_AGENT_PORT di compose.yaml.
+  slaveAgentPort: -1
   securityRealm:
     local:
       allowsSignup: false

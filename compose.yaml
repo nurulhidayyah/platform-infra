@@ -136,6 +136,9 @@ services:
       JENKINS_OPTS: --httpListenAddress=127.0.0.1 --httpPort=8090
       JAVA_OPTS: -Djenkins.install.runSetupWizard=false -Xmx768m
       CASC_JENKINS_CONFIG: /casc/jenkins.yaml
+      # Semua build jalan di Jenkins sendiri, tanpa agent: port agent (bawaan
+      # image 50000, terbuka di semua alamat karena network host) dimatikan.
+      JENKINS_SLAVE_AGENT_PORT: "-1"
     # GID grup docker di host, supaya user jenkins boleh memakai soket Docker.
     # Siapa pun yang menjalankan pipeline praktis punya root di VPS: hanya repo
     # milik sendiri yang boleh memicu build.
