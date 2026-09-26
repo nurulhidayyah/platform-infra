@@ -51,28 +51,6 @@ credentials:
 # pipeline-nya ada di Jenkinsfile repo service itu sendiri.
 jobs:
   - script: |
-      pipelineJob('contoh-hello') {
-        description('Service hello di contoh-dev. Dipicu webhook GitHub setiap push ke main.')
-        properties {
-          pipelineTriggers {
-            triggers {
-              githubPush()
-            }
-          }
-        }
-        definition {
-          cpsScm {
-            scm {
-              git {
-                remote { url('https://github.com/nurulhidayyah/contoh-hello.git') }
-                branch('*/main')
-              }
-            }
-            scriptPath('Jenkinsfile')
-            lightweight(true)
-          }
-        }
-      }
       pipelineJob('timesheet-app') {
         description('Aplikasi timesheet di timesheet-prod. Dipicu webhook GitHub setiap push ke main.')
         properties {
