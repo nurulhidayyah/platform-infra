@@ -74,8 +74,9 @@ hidup, tanpa menunggu k3s, dan tidak bisa dijangkau dari internet.
 | 3900 | Garage, API S3 | RPC 3901 dan admin 3903 tidak dibuka ke host |
 | 3909 | garage-webui | wajib login; kata sandi di baris pertama `env/garage-webui.env` |
 | 5000 | registry image | hanya 127.0.0.1; k3s menariknya dari sini tanpa `registries.yaml` |
+| 8090 | Jenkins | network host, diikat ke 127.0.0.1; wajib login `admin` |
 
-Port Jenkins, Prometheus, Grafana, dan Jaeger ditetapkan saat komponennya
+Port Prometheus, Grafana, dan Jaeger ditetapkan saat komponennya
 dipasang, dan ditambahkan ke tabel ini.
 
 ClusterIP tetap di k3s. Host VPS bisa merutekan alamat ini, jadi PC bisa
@@ -98,6 +99,9 @@ scripts/garage-init.sh         layout satu node dan kunci platform-admin
 scripts/webui-env.sh           login dan admin token untuk garage-webui
 registry/config.yml            registry image; penghapusan diaktifkan untuk garbage collection
 scripts/registry-gc.sh         membuang blob yang tidak dirujuk tag mana pun
+jenkins/                       image Jenkins (plugin dipin) dan konfigurasinya sebagai kode
+scripts/jenkins-key.sh         kunci SSH Jenkins untuk menulis ke platform-gitops
+secrets/                       kunci privat; di-gitignore
 pc/ssh-config.example          contoh ~/.ssh/config untuk PC
 k3s/config.yaml                konfigurasi k3s: servicelb mati, Secret terenkripsi
 k3s/traefik-config.yaml        Traefik di ClusterIP 10.43.0.80, tanpa port host

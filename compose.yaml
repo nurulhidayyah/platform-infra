@@ -121,6 +121,40 @@ services:
       timeout: 5s
       retries: 5
 
+  jenkins:
+    build: ./jenkins
+    image: platform-jenkins:2.568.3
+    container_name: platform-jenkins
+    restart: unless-stopped
+    # Network host: 127.0.0.1 di dalam Jenkins sama dengan 127.0.0.1 di VPS, jadi
+    # registry dan port uji Testcontainers terjangkau apa adanya. Port yang
+    # didengar proses di network host tetap dijaga ufw, berbeda dengan port yang
+    # dipublikasikan Docker. UI hanya di 127.0.0.1:8090.
+    network_mode: host
+    env_file: env/jenkins.env
+    environment:
+      JENKINS_OPTS: --httpListenAddress=127.0.0.1 --httpPort=8090
+      JAVA_OPTS: -Djenkins.install.runSetupWizard=false -Xmx768m
+      CASC_JENKINS_CONFIG: /casc/jenkins.yaml
+    # GID grup docker di host, supaya user jenkins boleh memakai soket Docker.
+    # Siapa pun yang menjalankan pipeline praktis punya root di VPS: hanya repo
+    # milik sendiri yang boleh memicu build.
+    group_add:
+      - "${DOCKER_GID:-998}"
+    volumes:
+      - jenkins_home:/var/jenkins_home
+      - ./jenkins/casc:/casc:ro
+      - ./secrets/gitops-deploy-key:/run/secrets/gitops-deploy-key:ro
+      - /var/run/docker.sock:/var/run/docker.sock
+    cpus: 2
+    mem_limit: 1536m
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "-o", "/dev/null", "http://127.0.0.1:8090/login"]
+      interval: 15s
+      timeout: 5s
+      retries: 20
+      start_period: 60s
+
 volumes:
   postgres_data:
   mysql_data:
@@ -128,6 +162,7 @@ volumes:
   garage_meta:
   garage_data:
   registry_data:
+  jenkins_home:
 
 networks:
   default:

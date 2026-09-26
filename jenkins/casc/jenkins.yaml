@@ -1,0 +1,32 @@
+# Konfigurasi Jenkins sebagai kode. Perubahan lewat UI hilang saat container
+# dibuat ulang; ubah berkas ini, lalu `make up`.
+jenkins:
+  systemMessage: "Jenkins platform Dev. Konfigurasinya di platform-infra/jenkins/casc."
+  numExecutors: 2
+  securityRealm:
+    local:
+      allowsSignup: false
+      users:
+        - id: admin
+          password: "${JENKINS_ADMIN_PASSWORD}"
+  authorizationStrategy:
+    loggedInUsersCanDoAnything:
+      allowAnonymousRead: false
+
+unclassified:
+  location:
+    # Alamat yang dilihat dari PC lewat SSH port forwarding.
+    url: "http://localhost:8090/"
+
+credentials:
+  system:
+    domainCredentials:
+      - credentials:
+          - basicSSHUserPrivateKey:
+              scope: GLOBAL
+              id: platform-gitops-deploy-key
+              username: git
+              description: "Deploy key platform-gitops (tulis)"
+              privateKeySource:
+                directEntry:
+                  privateKey: "${readFile:/run/secrets/gitops-deploy-key}"
