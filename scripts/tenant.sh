@@ -13,6 +13,10 @@ usage() {
 Pemakaian:
   tenant.sh create <project> <service> <env> <jatah>...
   CONFIRM=yes tenant.sh delete <project> <service> <env>
+  tenant.sh secret <project> <service> <env>
+
+secret menyalin kredensial ke Secret <service>-platform di namespace
+<project>-<env>, supaya pod menerimanya lewat envFrom.
 
 Jatah: postgres, mysql, redis, s3
 Contoh: tenant.sh create worklog identity dev postgres redis
@@ -119,7 +123,7 @@ create() {
   {
     echo "# Kredensial tenant $dash_name, dibuat $(date -u +%Y-%m-%dT%H:%MZ). Jangan di-commit."
     echo "# Host sengaja tidak ditulis: dari PC lewat ssh -L memakai localhost,"
-    echo "# dari pod memakai alamat host yang terlihat dari cluster."
+    echo "# dari pod di k3s memakai 172.30.0.1."
   } > "$cred_file"
   for r in "$@"; do
     "create_$r"
@@ -150,8 +154,19 @@ SQL
   echo "dihapus $dash_name"
 }
 
+secret() {
+  [[ -e $cred_file ]] || { echo "tenant $dash_name belum ada: jalankan create dulu" >&2; exit 1; }
+  local namespace="${project}-${env}"
+  kubectl get namespace "$namespace" >/dev/null 2>&1 || { echo "namespace $namespace belum ada" >&2; exit 1; }
+  # Baris komentar di berkas kredensial diabaikan --from-env-file.
+  kubectl -n "$namespace" create secret generic "${service}-platform" \
+    --from-env-file="$cred_file" --dry-run=client -o yaml | kubectl apply -f - >/dev/null
+  echo "Secret ${service}-platform di namespace $namespace diperbarui"
+}
+
 case $action in
   create) create "$@" ;;
   delete) delete ;;
+  secret) secret ;;
   *) usage ;;
 esac

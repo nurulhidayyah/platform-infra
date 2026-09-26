@@ -40,6 +40,7 @@ Placeholder: `<project>` (misalnya `worklog`), `<service>` (misalnya
 | Prefix key Redis | `<project>:<service>:` | `worklog:identity:` |
 | Topic Kafka | `<env>.<project>.<domain>.<event>` | `dev.worklog.document.requested` |
 | Namespace k3s | `<project>-<env>` | `worklog-dev` |
+| Secret kredensial platform | `<service>-platform` | `identity-platform` |
 | Repository image | `<project>/<service>` | `worklog/identity` |
 | Tag image | SHA commit, 7 karakter | `a1b2c3d` |
 | Hostname aplikasi | `<project>-<env>.hostingskuy.cloud` | `worklog-dev.hostingskuy.cloud` |
@@ -57,6 +58,9 @@ dalam satu project dibedakan lewat path, bukan subdomain.
 ## Port di host
 
 Semua komponen platform mendengar di `127.0.0.1`, kecuali disebut lain.
+Datastore juga mendengar di `172.30.0.1`, gateway network Docker `platform`,
+supaya pod di k3s bisa menjangkaunya. Alamat itu selalu ada selama Docker
+hidup, tanpa menunggu k3s, dan tidak bisa dijangkau dari internet.
 
 | Port | Pemakai | Catatan |
 |---|---|---|
@@ -85,6 +89,8 @@ garage/garage.toml             konfigurasi Garage tanpa rahasia
 scripts/garage-init.sh         layout satu node dan kunci platform-admin
 scripts/webui-env.sh           login dan admin token untuk garage-webui
 pc/ssh-config.example          contoh ~/.ssh/config untuk PC
+k3s/config.yaml                konfigurasi k3s: servicelb mati, Secret terenkripsi
+k3s/traefik-config.yaml        Traefik di ClusterIP 10.43.0.80, tanpa port host
 scripts/tenant.sh              jatah tenant
 scripts/test-isolation.sh      bukti bahwa dua tenant tidak bisa saling membaca
 tenants/                       kredensial hasil jatah tenant; di-gitignore
@@ -104,10 +110,26 @@ sejak start pertama.
 
 Kredensial tenant ditulis ke `tenants/<project>-<service>-<env>.env`. Host
 sengaja tidak ditulis: dari PC lewat `ssh -L` alamatnya `localhost`, dari pod
-alamatnya host yang terlihat dari cluster.
+alamatnya `172.30.0.1`.
 
 `make tenant-delete` menghapus database, user, dan seluruh datanya, jadi harus
 disertai `CONFIRM=yes`.
+
+## Memasang k3s
+
+Kedua berkas di `k3s/` harus sudah terpasang **sebelum** k3s pertama kali start.
+Kalau terlambat, Traefik sempat berdiri dengan setelan bawaan dan mengambil port
+80 dan 443 di alamat publik.
+
+```
+sudo mkdir -p /etc/rancher/k3s /var/lib/rancher/k3s/server/manifests
+sudo cp k3s/config.yaml /etc/rancher/k3s/config.yaml
+sudo cp k3s/traefik-config.yaml /var/lib/rancher/k3s/server/manifests/traefik-config.yaml
+curl -sfL https://get.k3s.io | sudo INSTALL_K3S_VERSION=v1.36.4+k3s1 sh -
+mkdir -p ~/.kube
+sudo cp /etc/rancher/k3s/k3s.yaml ~/.kube/config
+sudo chown "$USER:$USER" ~/.kube/config && chmod 600 ~/.kube/config
+```
 
 ## Object storage
 

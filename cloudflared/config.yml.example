@@ -1,0 +1,17 @@
+# Konfigurasi tunnel di /etc/cloudflared/config.yml (butuh sudo, lalu
+# `systemctl restart cloudflared`). Ganti <tunnel-id> dengan ID tunnel.
+#
+# Hanya hostname aplikasi dan webhook yang lewat tunnel. Datastore dan tampilan
+# operasional tidak pernah punya hostname; mereka dijangkau lewat SSH port
+# forwarding. Record DNS setiap hostname dibuat dengan
+# `cloudflared tunnel route dns <tunnel-id> <hostname>`, tanpa sudo.
+tunnel: <tunnel-id>
+credentials-file: /home/nskuy/.cloudflared/<tunnel-id>.json
+
+ingress:
+  - hostname: ssh.hostingskuy.cloud
+    service: ssh://localhost:22
+  # Hostname aplikasi: <project>-<env>.hostingskuy.cloud, semua ke Traefik.
+  - hostname: worklog-dev.hostingskuy.cloud
+    service: http://10.43.0.80:80
+  - service: http_status:404

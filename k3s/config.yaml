@@ -1,0 +1,15 @@
+# Dipasang ke /etc/rancher/k3s/config.yaml SEBELUM k3s pertama kali start.
+# Setiap kunci sama dengan flag `k3s server` tanpa `--`.
+
+# servicelb mewujudkan Service bertipe LoadBalancer dengan membuka hostPort di
+# setiap alamat node, termasuk IP publik. Platform ini tidak membuka port web
+# ke internet (lalu lintas web lewat Cloudflare Tunnel), jadi servicelb
+# dimatikan. Service LoadBalancer yang tidak sengaja dibuat akan tertahan
+# Pending, bukan diam-diam membuka port.
+disable:
+  - servicelb
+
+# Secret Kubernetes dienkripsi di datastore k3s, bukan hanya base64.
+secrets-encryption: true
+
+write-kubeconfig-mode: "0600"

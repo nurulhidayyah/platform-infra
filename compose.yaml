@@ -1,5 +1,11 @@
-# Backing services platform. Semuanya hanya mendengar di 127.0.0.1; dari PC
-# dijangkau lewat SSH port forwarding. Aturan nama dan port: README.
+# Backing services platform. Setiap port dibuka di dua alamat, dan keduanya
+# tidak bisa dijangkau dari internet:
+#   127.0.0.1   untuk host, dan untuk PC lewat SSH port forwarding
+#   172.30.0.1  gateway network `platform`, untuk pod di k3s
+# Gateway itu dibuat Docker sendiri, jadi selalu ada tanpa menunggu k3s. Alamat
+# cni0 k3s (10.42.0.1) baru ada setelah k3s start; setelah reboot Docker
+# biasanya lebih dulu, lalu container gagal start karena alamatnya belum ada.
+# Aturan nama dan port: README.
 name: platform
 
 services:
@@ -10,6 +16,7 @@ services:
     env_file: env/postgres.env
     ports:
       - "127.0.0.1:5432:5432"
+      - "172.30.0.1:5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./postgres/init:/docker-entrypoint-initdb.d:ro
@@ -28,6 +35,7 @@ services:
     ports:
       # 3306 di host sudah dipakai MySQL milik absensi.
       - "127.0.0.1:3307:3306"
+      - "172.30.0.1:3307:3306"
     volumes:
       - mysql_data:/var/lib/mysql
     mem_limit: 768m
@@ -46,6 +54,7 @@ services:
     entrypoint: ["/bin/sh", "/platform/entrypoint.sh"]
     ports:
       - "127.0.0.1:6379:6379"
+      - "172.30.0.1:6379:6379"
     volumes:
       - redis_data:/data
       - ./redis/entrypoint.sh:/platform/entrypoint.sh:ro
@@ -64,6 +73,7 @@ services:
     ports:
       # Hanya API S3. RPC (3901) dan admin (3903) tidak dibuka ke host.
       - "127.0.0.1:3900:3900"
+      - "172.30.0.1:3900:3900"
     volumes:
       - garage_meta:/var/lib/garage/meta
       - garage_data:/var/lib/garage/data
@@ -105,3 +115,7 @@ volumes:
 networks:
   default:
     name: platform
+    ipam:
+      config:
+        - subnet: 172.30.0.0/24
+          gateway: 172.30.0.1

@@ -2,7 +2,7 @@
 COMPOSE := docker compose
 
 # `env` juga nama direktori; tanpa .PHONY make menganggapnya sudah dibuat.
-.PHONY: help env up down ps logs tenant-create tenant-delete test-isolation
+.PHONY: help env up down ps logs tenant-create tenant-delete tenant-secret test-isolation test-namespace
 
 help: ## Tampilkan daftar perintah
 	@grep -E '^[a-zA-Z0-9_-]+:.*## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*## "} {printf "  %-16s %s\n", $$1, $$2}'
@@ -30,5 +30,11 @@ tenant-create: ## Buat jatah: PROJECT= SERVICE= ENV= WITH="postgres mysql redis 
 tenant-delete: ## Hapus jatah beserta datanya: PROJECT= SERVICE= ENV= CONFIRM=yes
 	@CONFIRM=$(CONFIRM) scripts/tenant.sh delete $(PROJECT) $(SERVICE) $(ENV)
 
+tenant-secret: ## Salin kredensial ke Secret <service>-platform: PROJECT= SERVICE= ENV=
+	@scripts/tenant.sh secret $(PROJECT) $(SERVICE) $(ENV)
+
 test-isolation: ## Buktikan dua tenant tidak bisa saling membaca
 	@scripts/test-isolation.sh
+
+test-namespace: ## Buktikan isolasi jaringan namespace k3s: NS=worklog-dev
+	@scripts/test-namespace.sh $(NS)

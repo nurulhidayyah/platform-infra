@@ -1,0 +1,35 @@
+# Dipasang ke /var/lib/rancher/k3s/server/manifests/ SEBELUM k3s pertama kali
+# start, supaya Traefik tidak pernah sempat berdiri dengan setelan bawaan.
+#
+# Setelan bawaan k3s memasang Traefik sebagai Service LoadBalancer yang
+# mengambil port 80 dan 443 di alamat publik VPS. Platform ini memasukkan
+# lalu lintas web lewat Cloudflare Tunnel, jadi Traefik cukup mendengar di
+# ClusterIP tetap 10.43.0.80: cloudflared di host meneruskan setiap hostname
+# aplikasi ke alamat ini. Alamatnya ditetapkan supaya konfigurasi cloudflared
+# tidak basi saat Service dibuat ulang; 10.43.0.1 (API server) dan 10.43.0.10
+# (DNS) sudah dipakai sistem.
+#
+# Konfigurasi ini terbukti di iterasi sebelumnya dengan k3s 1.36.
+apiVersion: helm.cattle.io/v1
+kind: HelmChartConfig
+metadata:
+  name: traefik
+  namespace: kube-system
+spec:
+  # `type` harus di dalam `service.spec`. Kunci `service.type` gaya chart lama
+  # diterima tanpa galat lalu diabaikan, dan Service tetap LoadBalancer.
+  #
+  # trustedIPs: cloudflared di host terlihat dari pod Traefik sebagai 10.42.0.1
+  # (alamat cni0). Tanpa daftar ini Traefik membuang X-Forwarded-For dan menimpa
+  # X-Forwarded-Proto, sehingga aplikasi tidak tahu alamat asli pengunjung dan
+  # mengira koneksinya http.
+  valuesContent: |-
+    service:
+      spec:
+        type: ClusterIP
+        clusterIP: 10.43.0.80
+    ports:
+      web:
+        forwardedHeaders:
+          trustedIPs:
+            - 10.42.0.1/32
