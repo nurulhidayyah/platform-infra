@@ -55,6 +55,10 @@ paket gratis hanya menutup `*.hostingskuy.cloud`, jadi nama seperti
 `identity.worklog-dev.hostingskuy.cloud` tidak punya sertifikat. Service
 dalam satu project dibedakan lewat path, bukan subdomain.
 
+**Pengecualian:** aplikasi yang sudah punya alamat sebelum platform ini ada
+tetap memakai alamat lamanya. `timesheet-prod` dilayani di
+`timesheet.hostingskuy.cloud`.
+
 ## Port di host
 
 Semua komponen platform mendengar di `127.0.0.1`, kecuali disebut lain.
@@ -103,6 +107,7 @@ scripts/webui-env.sh           login dan admin token untuk garage-webui
 registry/config.yml            registry image; penghapusan diaktifkan untuk garbage collection
 scripts/registry-gc.sh         membuang blob yang tidak dirujuk tag mana pun
 jenkins/                       image Jenkins (plugin dipin) dan konfigurasinya sebagai kode
+jenkins/lib/vars/              resep bersama servicePipeline untuk setiap repo service
 scripts/jenkins-key.sh         kunci SSH Jenkins untuk menulis ke platform-gitops
 secrets/                       kunci privat dan token Prometheus; di-gitignore
 prometheus/                    config, aturan alert, dan uji alertnya
@@ -137,6 +142,38 @@ alamatnya `172.30.0.1`.
 `make tenant-delete` menghapus database, user, dan seluruh datanya, jadi harus
 disertai `CONFIRM=yes`.
 
+## Menambah service
+
+Service baru tidak mengubah repo ini maupun platform-gitops. Syaratnya ada di
+repo service itu sendiri, di akun github.com/nurulhidayyah:
+
+```
+Jenkinsfile   servicePipeline(project: 'worklog', service: 'identity')
+pom.xml       Maven + Jib   (atau Dockerfile)
+deploy/*.yaml manifest biasa; image ditulis `app`, tag diisi pipeline
+```
+
+Folder Jenkins `github` memindai akun itu lewat GitHub App
+`nurulhidayyah-platform-jenkins` (terpasang di semua repo, termasuk yang
+privat; webhook-nya milik App, bukan per repo). Setiap repo yang punya
+`Jenkinsfile` menjadi job, satu cabang per branch dan pull request. Semua
+branch diuji; `main` juga mendorong image dan menyalin `deploy/` ke
+`platform-gitops/services/<project>-<env>/<service>/`, yang oleh ApplicationSet
+diubah menjadi Application. Repo yang di-archive diabaikan.
+
+Yang tetap langkah tangan, sekali saja:
+
+- project baru: satu berkas `namespaces/<project>-<env>.yaml` di platform-gitops,
+  dan hostname-nya lewat `cloudflared tunnel route dns`;
+- service yang butuh data: `make tenant-create` lalu `make tenant-secret`.
+
+Resep `servicePipeline` dibaca dari branch `main` repo ini. Kunci privat App
+disimpan di `secrets/github-app-pkcs8.pem` (PKCS#8, yang diminta Jenkins):
+
+```
+openssl pkcs8 -topk8 -nocrypt -in <unduhan>.pem -out secrets/github-app-pkcs8.pem
+```
+
 ## Memasang k3s
 
 Kedua berkas di `k3s/` harus sudah terpasang **sebelum** k3s pertama kali start.
@@ -162,7 +199,8 @@ kubectl apply -f k3s/argocd/root.yaml
 
 Setelah itu isi cluster datang dari
 [platform-gitops](https://github.com/nurulhidayyah/platform-gitops): setiap
-berkas di folder `argocd/` repo itu adalah satu Application. `selfHeal` aktif,
+berkas di folder `argocd/` repo itu adalah Application, ApplicationSet, atau
+AppProject. `selfHeal` aktif,
 jadi perubahan langsung di cluster dikembalikan ke isi Git. Argo CD memeriksa
 Git setiap tiga menit.
 
