@@ -2,7 +2,7 @@
 COMPOSE := docker compose
 
 # `env` juga nama direktori; tanpa .PHONY make menganggapnya sudah dibuat.
-.PHONY: help env up down ps logs tenant-create tenant-delete tenant-secret test-isolation test-namespace
+.PHONY: help env up down ps logs tenant-create tenant-delete tenant-secret test-isolation test-namespace registry-gc
 
 help: ## Tampilkan daftar perintah
 	@grep -E '^[a-zA-Z0-9_-]+:.*## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*## "} {printf "  %-16s %s\n", $$1, $$2}'
@@ -38,3 +38,6 @@ test-isolation: ## Buktikan dua tenant tidak bisa saling membaca
 
 test-namespace: ## Buktikan isolasi jaringan namespace k3s: NS=worklog-dev
 	@scripts/test-namespace.sh $(NS)
+
+registry-gc: ## Buang blob registry yang tidak dirujuk tag mana pun
+	@scripts/registry-gc.sh

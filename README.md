@@ -73,7 +73,7 @@ hidup, tanpa menunggu k3s, dan tidak bisa dijangkau dari internet.
 | 6379 | Redis | |
 | 3900 | Garage, API S3 | RPC 3901 dan admin 3903 tidak dibuka ke host |
 | 3909 | garage-webui | wajib login; kata sandi di baris pertama `env/garage-webui.env` |
-| 5000 | registry image | |
+| 5000 | registry image | hanya 127.0.0.1; k3s menariknya dari sini tanpa `registries.yaml` |
 
 Port Jenkins, Prometheus, Grafana, Jaeger, dan Argo CD ditetapkan saat
 komponennya dipasang, dan ditambahkan ke tabel ini.
@@ -88,6 +88,8 @@ redis/entrypoint.sh            menyiapkan aclfile sebelum Redis start
 garage/garage.toml             konfigurasi Garage tanpa rahasia
 scripts/garage-init.sh         layout satu node dan kunci platform-admin
 scripts/webui-env.sh           login dan admin token untuk garage-webui
+registry/config.yml            registry image; penghapusan diaktifkan untuk garbage collection
+scripts/registry-gc.sh         membuang blob yang tidak dirujuk tag mana pun
 pc/ssh-config.example          contoh ~/.ssh/config untuk PC
 k3s/config.yaml                konfigurasi k3s: servicelb mati, Secret terenkripsi
 k3s/traefik-config.yaml        Traefik di ClusterIP 10.43.0.80, tanpa port host

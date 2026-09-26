@@ -1,0 +1,15 @@
+# Registry image platform. Hanya mendengar di 127.0.0.1:5000: containerd k3s
+# berjalan di network host, jadi menarik dari 127.0.0.1:5000, dan Jenkins
+# mendorong lewat Docker milik host yang juga melihat alamat itu.
+version: 0.1
+log:
+  level: info
+storage:
+  filesystem:
+    rootdirectory: /var/lib/registry
+  # Tanpa ini manifest tidak bisa dihapus, dan garbage collection tidak punya
+  # apa pun untuk dibuang.
+  delete:
+    enabled: true
+http:
+  addr: :5000

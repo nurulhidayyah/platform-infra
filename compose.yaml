@@ -105,12 +105,29 @@ services:
       garage:
         condition: service_healthy
 
+  registry:
+    image: registry:3.0.0
+    container_name: platform-registry
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:5000:5000"
+    volumes:
+      - registry_data:/var/lib/registry
+      - ./registry/config.yml:/etc/distribution/config.yml:ro
+    mem_limit: 128m
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:5000/v2/"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
 volumes:
   postgres_data:
   mysql_data:
   redis_data:
   garage_meta:
   garage_data:
+  registry_data:
 
 networks:
   default:
