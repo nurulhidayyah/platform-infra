@@ -65,3 +65,25 @@ jobs:
           }
         }
       }
+      pipelineJob('timesheet-app') {
+        description('Aplikasi timesheet di timesheet-prod. Dipicu webhook GitHub setiap push ke main.')
+        properties {
+          pipelineTriggers {
+            triggers {
+              githubPush()
+            }
+          }
+        }
+        definition {
+          cpsScm {
+            scm {
+              git {
+                remote { url('https://github.com/nurulhidayyah/timesheet-app.git') }
+                branch('*/main')
+              }
+            }
+            scriptPath('Jenkinsfile')
+            lightweight(true)
+          }
+        }
+      }
