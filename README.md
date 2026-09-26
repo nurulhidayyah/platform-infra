@@ -119,6 +119,7 @@ k3s/config.yaml                konfigurasi k3s: servicelb mati, Secret terenkrip
 k3s/traefik-config.yaml        Traefik di ClusterIP 10.43.0.80, tanpa port host
 k3s/argocd/                    Argo CD yang dipin, dan Application akar ke platform-gitops
 scripts/tenant.sh              jatah tenant
+scripts/reset.sh               mengulang backing services dari nol (`make reset`)
 scripts/test-isolation.sh      bukti bahwa dua tenant tidak bisa saling membaca
 tenants/                       kredensial hasil jatah tenant; di-gitignore
 ```
@@ -141,6 +142,12 @@ alamatnya `172.30.0.1`.
 
 `make tenant-delete` menghapus database, user, dan seluruh datanya, jadi harus
 disertai `CONFIRM=yes`.
+
+`make reset CONFIRM=yes` mengulang semua backing services dari nol: volume
+dihapus, `env/*.env` dibuat ulang dengan kata sandi baru, jatah tenant yang
+tercatat di `tenants/` dibuat ulang beserta Secret-nya di cluster, lalu
+Jenkins memindai GitHub supaya image dibangun ulang. `GITHUB_WEBHOOK_SECRET`,
+isi `secrets/`, dan semua yang ada di k3s tidak disentuh.
 
 ## Menambah service
 

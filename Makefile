@@ -2,7 +2,7 @@
 COMPOSE := docker compose
 
 # `env` juga nama direktori; tanpa .PHONY make menganggapnya sudah dibuat.
-.PHONY: help env up down ps logs tenant-create tenant-delete tenant-secret test-isolation test-namespace registry-gc k8s-token test-alerts
+.PHONY: help env up down ps logs tenant-create tenant-delete tenant-secret test-isolation test-namespace registry-gc k8s-token test-alerts reset
 
 help: ## Tampilkan daftar perintah
 	@grep -E '^[a-zA-Z0-9_-]+:.*## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*## "} {printf "  %-16s %s\n", $$1, $$2}'
@@ -48,3 +48,6 @@ k8s-token: ## Salin token Prometheus dari cluster ke secrets/k8s/
 
 test-alerts: ## Uji aturan alert Prometheus dengan deret buatan
 	@docker run --rm -v $(CURDIR)/prometheus:/p:ro -w /p/tests --entrypoint promtool prom/prometheus:v3.15.0 test rules platform.test.yml
+
+reset: ## Ulang semua volume dan kata sandi dari nol (menghapus data!): CONFIRM=yes
+	@CONFIRM=$(CONFIRM) scripts/reset.sh
