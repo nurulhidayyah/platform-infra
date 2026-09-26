@@ -67,11 +67,42 @@ Semua komponen platform mendengar di `127.0.0.1`, kecuali disebut lain.
 | 5432 | Postgres platform | |
 | 3307 | MySQL platform | 3306 sudah terpakai |
 | 6379 | Redis | |
-| 9000, 9001 | MinIO API dan konsol | |
+| 9000, 9001 | object storage (S3) | komponennya belum dipilih |
 | 5000 | registry image | |
 
 Port Jenkins, Prometheus, Grafana, Jaeger, dan Argo CD ditetapkan saat
 komponennya dipasang, dan ditambahkan ke tabel ini.
+
+## Susunan
+
+```
+compose.yaml                   backing services: Postgres, MySQL, Redis
+env/<komponen>.env.example     contoh konfigurasi; `make env` membuat versi aslinya
+postgres/init/                 SQL yang jalan sekali, saat volume Postgres masih baru
+redis/entrypoint.sh            menyiapkan aclfile sebelum Redis start
+scripts/tenant.sh              jatah tenant
+scripts/test-isolation.sh      bukti bahwa dua tenant tidak bisa saling membaca
+tenants/                       kredensial hasil jatah tenant; di-gitignore
+```
+
+## Memakai
+
+```
+make up
+make tenant-create PROJECT=worklog SERVICE=identity ENV=dev WITH="postgres redis"
+make test-isolation
+```
+
+`make up` menjalankan `make env` lebih dulu. `make env` tidak pernah menimpa
+berkas yang sudah ada, karena kata sandi superuser tertanam di volume data
+sejak start pertama.
+
+Kredensial tenant ditulis ke `tenants/<project>-<service>-<env>.env`. Host
+sengaja tidak ditulis: dari PC lewat `ssh -L` alamatnya `localhost`, dari pod
+alamatnya host yang terlihat dari cluster.
+
+`make tenant-delete` menghapus database, user, dan seluruh datanya, jadi harus
+disertai `CONFIRM=yes`.
 
 ## Branch
 

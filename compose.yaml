@@ -1,0 +1,66 @@
+# Backing services platform. Semuanya hanya mendengar di 127.0.0.1; dari PC
+# dijangkau lewat SSH port forwarding. Aturan nama dan port: README.
+name: platform
+
+services:
+  postgres:
+    image: postgres:16.15-alpine
+    container_name: platform-postgres
+    restart: unless-stopped
+    env_file: env/postgres.env
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./postgres/init:/docker-entrypoint-initdb.d:ro
+    mem_limit: 512m
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\""]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  mysql:
+    image: mysql:8.4.11
+    container_name: platform-mysql
+    restart: unless-stopped
+    env_file: env/mysql.env
+    ports:
+      # 3306 di host sudah dipakai MySQL milik absensi.
+      - "127.0.0.1:3307:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    mem_limit: 768m
+    healthcheck:
+      test: ["CMD-SHELL", "MYSQL_PWD=\"$$MYSQL_ROOT_PASSWORD\" mysqladmin ping -h 127.0.0.1 -uroot --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 40s
+
+  redis:
+    image: redis:7.4.11-alpine
+    container_name: platform-redis
+    restart: unless-stopped
+    env_file: env/redis.env
+    entrypoint: ["/bin/sh", "/platform/entrypoint.sh"]
+    ports:
+      - "127.0.0.1:6379:6379"
+    volumes:
+      - redis_data:/data
+      - ./redis/entrypoint.sh:/platform/entrypoint.sh:ro
+    mem_limit: 128m
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli --no-auth-warning --user default --pass \"$$REDIS_PASSWORD\" ping | grep -q PONG"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:
+  mysql_data:
+  redis_data:
+
+networks:
+  default:
+    name: platform
