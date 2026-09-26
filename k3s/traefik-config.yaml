@@ -33,3 +33,12 @@ spec:
         forwardedHeaders:
           trustedIPs:
             - 10.42.0.1/32
+    # Status Ingress diisi dari Service Traefik, dan Service ClusterIP tidak
+    # punya alamat untuk disalin. Ingress tanpa alamat dianggap Argo CD masih
+    # Progressing selamanya, jadi Traefik menuliskan ClusterIP-nya sendiri.
+    providers:
+      kubernetesIngress:
+        publishedService:
+          enabled: false
+    additionalArguments:
+      - --providers.kubernetesingress.ingressendpoint.ip=10.43.0.80

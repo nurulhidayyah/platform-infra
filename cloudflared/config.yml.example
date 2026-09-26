@@ -3,15 +3,16 @@
 #
 # Hanya hostname aplikasi dan webhook yang lewat tunnel. Datastore dan tampilan
 # operasional tidak pernah punya hostname; mereka dijangkau lewat SSH port
-# forwarding. Record DNS setiap hostname dibuat dengan
-# `cloudflared tunnel route dns <tunnel-id> <hostname>`, tanpa sudo.
+# forwarding.
 tunnel: <tunnel-id>
 credentials-file: /home/nskuy/.cloudflared/<tunnel-id>.json
 
 ingress:
   - hostname: ssh.hostingskuy.cloud
     service: ssh://localhost:22
-  # Hostname aplikasi: <project>-<env>.hostingskuy.cloud, semua ke Traefik.
-  - hostname: worklog-dev.hostingskuy.cloud
-    service: http://10.43.0.80:80
-  - service: http_status:404
+  # Semua hostname lain yang record DNS-nya menunjuk ke tunnel diteruskan ke
+  # Traefik, yang memilih aplikasinya lewat Ingress dan menjawab 404 untuk
+  # hostname yang tidak dikenalnya. Project baru cukup dibuatkan record DNS:
+  #   cloudflared tunnel route dns <tunnel-id> <project>-<env>.hostingskuy.cloud
+  # tanpa mengubah berkas ini, jadi tanpa sudo.
+  - service: http://10.43.0.80:80
