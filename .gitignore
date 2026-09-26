@@ -1,0 +1,15 @@
+# Kredensial dan konfigurasi lokal. Repo ini publik.
+.env
+*.env
+!*.env.example
+secrets/
+*.pem
+*.key
+
+# Berkas kredensial hasil skrip jatah tenant
+tenants/
+
+# Editor dan OS
+.idea/
+.vscode/
+.DS_Store
