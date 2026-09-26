@@ -1,0 +1,22 @@
+# Application akar (app-of-apps). Dipasang sekali setelah Argo CD berdiri:
+#   kubectl apply -f k3s/argocd/root.yaml
+# Setelah itu semua isi cluster datang dari platform-gitops: setiap berkas di
+# folder argocd/ repo itu adalah satu Application.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: root
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/nurulhidayyah/platform-gitops.git
+    targetRevision: main
+    path: argocd
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argocd
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true

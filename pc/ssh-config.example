@@ -10,6 +10,8 @@ Host vps-dev
     LocalForward 6379 127.0.0.1:6379
     LocalForward 3900 127.0.0.1:3900
     LocalForward 3909 127.0.0.1:3909
+    # Tampilan Argo CD (ClusterIP di k3s; host VPS bisa merutekannya).
+    LocalForward 8180 10.43.0.81:80
     # Gagal keras kalau satu port lokal sudah terpakai, bukan diam-diam hilang.
     ExitOnForwardFailure yes
     ServerAliveInterval 30

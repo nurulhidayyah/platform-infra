@@ -75,8 +75,16 @@ hidup, tanpa menunggu k3s, dan tidak bisa dijangkau dari internet.
 | 3909 | garage-webui | wajib login; kata sandi di baris pertama `env/garage-webui.env` |
 | 5000 | registry image | hanya 127.0.0.1; k3s menariknya dari sini tanpa `registries.yaml` |
 
-Port Jenkins, Prometheus, Grafana, Jaeger, dan Argo CD ditetapkan saat
-komponennya dipasang, dan ditambahkan ke tabel ini.
+Port Jenkins, Prometheus, Grafana, dan Jaeger ditetapkan saat komponennya
+dipasang, dan ditambahkan ke tabel ini.
+
+ClusterIP tetap di k3s. Host VPS bisa merutekan alamat ini, jadi PC bisa
+menjangkaunya lewat `LocalForward`:
+
+| Alamat | Pemakai | Dari PC |
+|---|---|---|
+| 10.43.0.80 | Traefik | tidak perlu; aplikasi dibuka lewat hostname |
+| 10.43.0.81 | tampilan Argo CD | `localhost:8180` |
 
 ## Susunan
 
@@ -93,6 +101,7 @@ scripts/registry-gc.sh         membuang blob yang tidak dirujuk tag mana pun
 pc/ssh-config.example          contoh ~/.ssh/config untuk PC
 k3s/config.yaml                konfigurasi k3s: servicelb mati, Secret terenkripsi
 k3s/traefik-config.yaml        Traefik di ClusterIP 10.43.0.80, tanpa port host
+k3s/argocd/                    Argo CD yang dipin, dan Application akar ke platform-gitops
 scripts/tenant.sh              jatah tenant
 scripts/test-isolation.sh      bukti bahwa dua tenant tidak bisa saling membaca
 tenants/                       kredensial hasil jatah tenant; di-gitignore
@@ -131,6 +140,25 @@ curl -sfL https://get.k3s.io | sudo INSTALL_K3S_VERSION=v1.36.4+k3s1 sh -
 mkdir -p ~/.kube
 sudo cp /etc/rancher/k3s/k3s.yaml ~/.kube/config
 sudo chown "$USER:$USER" ~/.kube/config && chmod 600 ~/.kube/config
+```
+
+## Argo CD
+
+```
+kubectl apply -k k3s/argocd --server-side --force-conflicts
+kubectl apply -f k3s/argocd/root.yaml
+```
+
+Setelah itu isi cluster datang dari
+[platform-gitops](https://github.com/nurulhidayyah/platform-gitops): setiap
+berkas di folder `argocd/` repo itu adalah satu Application. `selfHeal` aktif,
+jadi perubahan langsung di cluster dikembalikan ke isi Git. Argo CD memeriksa
+Git setiap tiga menit.
+
+Kata sandi awal user `admin`:
+
+```
+kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath='{.data.password}' | base64 -d; echo
 ```
 
 ## Object storage

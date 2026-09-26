@@ -1,0 +1,44 @@
+# Argo CD, dipin ke satu versi. Pasang atau perbarui dengan:
+#   kubectl apply -k k3s/argocd --server-side --force-conflicts
+# --server-side wajib: CRD ApplicationSet terlalu besar untuk anotasi
+# last-applied milik apply biasa.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: argocd
+resources:
+  - namespace.yaml
+  - https://raw.githubusercontent.com/argoproj/argo-cd/v3.5.3/manifests/install.yaml
+patches:
+  # Tanpa TLS di server: tampilannya hanya dibuka dari PC lewat SSH port
+  # forwarding, tidak pernah dari internet.
+  - patch: |-
+      apiVersion: v1
+      kind: ConfigMap
+      metadata:
+        name: argocd-cmd-params-cm
+      data:
+        server.insecure: "true"
+  # ClusterIP tetap supaya LocalForward di PC tidak basi saat Service dibuat
+  # ulang. 10.43.0.80 dipakai Traefik.
+  - patch: |-
+      apiVersion: v1
+      kind: Service
+      metadata:
+        name: argocd-server
+      spec:
+        clusterIP: 10.43.0.81
+  # SSO (dex) dan notifikasi tidak dipakai; mematikannya menghemat RAM.
+  - patch: |-
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: argocd-dex-server
+      spec:
+        replicas: 0
+  - patch: |-
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: argocd-notifications-controller
+      spec:
+        replicas: 0
