@@ -20,6 +20,23 @@ unclassified:
   gitHubPluginConfig:
     hookSecretConfigs:
       - credentialsId: github-webhook-secret
+  # Resep bersama servicePipeline (jenkins/lib di repo ini), dimuat otomatis di
+  # setiap pipeline. Versinya branch main: perubahan resep berlaku setelah
+  # dev di-merge ke main. Untuk mencoba versi lain dari sebuah Jenkinsfile:
+  # @Library('platform@dev') _
+  globalLibraries:
+    libraries:
+      - name: platform
+        defaultVersion: main
+        implicit: true
+        allowVersionOverride: true
+        includeInChangesets: false
+        retriever:
+          modernSCM:
+            libraryPath: jenkins/lib/
+            scm:
+              git:
+                remote: https://github.com/nurulhidayyah/platform-infra.git
 
 credentials:
   system:
@@ -33,46 +50,44 @@ credentials:
               privateKeySource:
                 directEntry:
                   privateKey: "${readFile:/run/secrets/gitops-deploy-key}"
-          - basicSSHUserPrivateKey:
-              scope: GLOBAL
-              id: timesheet-app-deploy-key
-              username: git
-              description: "Deploy key timesheet-app (baca)"
-              privateKeySource:
-                directEntry:
-                  privateKey: "${readFile:/run/secrets/timesheet-app-deploy-key}"
+          # GitHub App nurulhidayyah-platform-jenkins, terpasang di semua repo akun:
+          # membaca repo (termasuk yang privat), menerima webhook-nya, dan
+          # memasang status build di commit. Kuncinya PKCS#8.
+          - gitHubApp:
+              id: github-app
+              appID: "5087073"
+              description: "GitHub App nurulhidayyah-platform-jenkins"
+              privateKey: "${readFile:/run/secrets/github-app.pem}"
           - string:
               scope: GLOBAL
               id: github-webhook-secret
               description: "Secret webhook GitHub"
               secret: "${GITHUB_WEBHOOK_SECRET}"
 
-# Satu job per repo service. Job dipicu webhook GitHub setiap ada push; isi
-# pipeline-nya ada di Jenkinsfile repo service itu sendiri.
+# Satu folder yang memindai akun GitHub. Setiap repo yang punya Jenkinsfile
+# otomatis menjadi job, dengan satu cabang job per branch dan pull request;
+# repo baru dan push dikabarkan lewat webhook GitHub App. Menambah service
+# tidak perlu mengubah berkas ini. Pull request dari fork tidak dibangun.
 jobs:
   - script: |
-      pipelineJob('timesheet-app') {
-        description('Aplikasi timesheet di timesheet-prod. Dipicu webhook GitHub setiap push ke main.')
-        properties {
-          pipelineTriggers {
-            triggers {
-              githubPush()
+      organizationFolder('github') {
+        displayName('GitHub nurulhidayyah')
+        description('Repo di github.com/nurulhidayyah yang punya Jenkinsfile. Deploy hanya dari branch main.')
+        organizations {
+          github {
+            repoOwner('nurulhidayyah')
+            apiUri('https://api.github.com')
+            credentialsId('github-app')
+            traits {
+              gitHubExcludeArchivedRepositories()
+              gitHubBranchDiscovery { strategyId(1) }
+              gitHubPullRequestDiscovery { strategyId(1) }
             }
           }
         }
-        definition {
-          cpsScm {
-            scm {
-              git {
-                remote {
-                  url('git@github.com:nurulhidayyah/timesheet-app.git')
-                  credentials('timesheet-app-deploy-key')
-                }
-                branch('*/main')
-              }
-            }
-            scriptPath('Jenkinsfile')
-            lightweight(true)
-          }
+        projectFactories {
+          workflowMultiBranchProjectFactory { scriptPath('Jenkinsfile') }
         }
+        orphanedItemStrategy { discardOldItems {} }
+        triggers { periodicFolderTrigger { interval('1d') } }
       }
