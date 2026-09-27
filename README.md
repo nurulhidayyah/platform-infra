@@ -93,6 +93,7 @@ menjangkaunya lewat `LocalForward`:
 |---|---|---|
 | 10.43.0.80 | Traefik | tidak perlu; aplikasi dibuka lewat hostname |
 | 10.43.0.81 | tampilan Argo CD | `localhost:8180` |
+| 10.43.0.82 | Headlamp, UI seluruh isi cluster (manifest di `platform-gitops/platform/headlamp.yaml`) | `localhost:8280` |
 
 ## Susunan
 

@@ -12,6 +12,8 @@ Host vps-dev
     LocalForward 3909 127.0.0.1:3909
     # Tampilan Argo CD (ClusterIP di k3s; host VPS bisa merutekannya).
     LocalForward 8180 10.43.0.81:80
+    # Headlamp: UI seluruh isi cluster, termasuk Secret dan ConfigMap di luar Git.
+    LocalForward 8280 10.43.0.82:80
     LocalForward 8090 127.0.0.1:8090
     LocalForward 3000 127.0.0.1:3000
     # Prometheus: kueri PromQL, Status > Targets, dan daftar alert.
