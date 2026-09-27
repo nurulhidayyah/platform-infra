@@ -148,15 +148,26 @@ def call(Map cfg = [:]) {
                   echo "    newTag: \\"$TAG\\""
                 } > "$dir/kustomization.yaml"
                 cd gitops
+                # Identitas untuk clone ini, bukan hanya untuk `commit`: kalau
+                # service lain push lebih dulu, `pull --rebase` membuat ulang
+                # commit ini dan juga butuh identitas. Tanpa itu rebase gagal
+                # dengan "empty ident name" (worklog-template main #2, 27 Sep).
+                git config user.name platform-jenkins
+                git config user.email jenkins@platform.invalid
                 git add -A "services/$NS/$SERVICE"
                 if git diff --cached --quiet; then
                   echo "platform-gitops sudah memuat $SERVICE $TAG"
                   exit 0
                 fi
-                git -c user.name=platform-jenkins -c user.email=jenkins@platform.invalid \
-                  commit -qm "deploy($NS): $SERVICE $TAG"
+                git commit -qm "deploy($NS): $SERVICE $TAG"
                 for i in 1 2 3; do
-                  git pull -q --rebase origin main && git push -q origin HEAD:main && exit 0
+                  if git pull -q --rebase origin main; then
+                    git push -q origin HEAD:main && exit 0
+                  else
+                    # Rebase yang gagal meninggalkan index setengah jalan;
+                    # tanpa abort, percobaan berikutnya ditolak git.
+                    git rebase --abort 2>/dev/null || true
+                  fi
                   sleep 3
                 done
                 exit 1
