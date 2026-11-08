@@ -25,11 +25,11 @@ fi
 valid "admin:$admin_pw" || { echo "login admin SonarQube gagal; cek env/sonarqube.env" >&2; exit 1; }
 api() { curl -fsS -u "admin:$admin_pw" -X POST "$url/api/$1" "${@:2}"; }
 
-# Gate Platform, hanya menilai kode baru (kode lama tidak): tanpa issue baru,
-# setiap security hotspot baru sudah ditinjau, duplikasi maksimal 3%, dan
-# coverage minimal 80%. Coverage butuh laporan dari repo service (JaCoCo,
-# pytest-cov, lcov); tanpa laporan coverage dianggap 0%. SonarQube melewatkan
-# syarat coverage dan duplikasi kalau kode barunya kurang dari 20 baris.
+# Gate Platform, ketat: berlaku untuk seluruh kode, bukan hanya kode baru.
+# Tanpa issue, setiap security hotspot sudah ditinjau, duplikasi maksimal 3%,
+# dan coverage minimal 80%. Coverage butuh laporan dari repo service (JaCoCo,
+# pytest-cov, lcov); tanpa laporan coverage dianggap 0%. Syarat kode baru
+# tetap ada supaya halaman project menampilkan keduanya.
 show() { curl -fsS -u "admin:$admin_pw" "$url/api/qualitygates/show?name=Platform"; }
 if ! show >/dev/null 2>&1; then
   api qualitygates/create --data-urlencode name=Platform >/dev/null
@@ -45,6 +45,10 @@ ensure new_violations GT 0
 ensure new_security_hotspots_reviewed LT 100
 ensure new_duplicated_lines_density GT 3
 ensure new_coverage LT 80
+ensure violations GT 0
+ensure security_hotspots_reviewed LT 100
+ensure duplicated_lines_density GT 3
+ensure coverage LT 80
 api qualitygates/set_as_default --data-urlencode name=Platform
 
 token=$(grep '^SONAR_TOKEN=' env/jenkins.env | cut -d= -f2- || true)
