@@ -20,6 +20,8 @@ Host vps-dev
     LocalForward 9090 127.0.0.1:9090
     LocalForward 16686 127.0.0.1:16686
     LocalForward 4318 127.0.0.1:4318
+    # SonarQube: hasil analisis dan quality gate tiap service.
+    LocalForward 9000 127.0.0.1:9000
     # Gagal keras kalau satu port lokal sudah terpakai, bukan diam-diam hilang.
     ExitOnForwardFailure yes
     ServerAliveInterval 30

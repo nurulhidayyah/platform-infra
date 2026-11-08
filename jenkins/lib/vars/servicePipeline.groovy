@@ -12,7 +12,8 @@
 // Cara membangun dipilih dari isi repo: pom.xml berarti Maven + Jib, Dockerfile
 // berarti docker build. Maven jalan dengan settings.xml sementara yang memuat
 // kredensial `github-packages` sebagai server `github`, untuk repo yang menarik
-// library dari GitHub Packages. Semua branch diuji; hanya main yang mendorong image dan
+// library dari GitHub Packages. Semua branch diuji dan dianalisis SonarQube
+// (quality gate gagal = build gagal); hanya main yang mendorong image dan
 // men-deploy. Deploy = menyalin folder deploy/ repo service ke
 // platform-gitops/services/<project>-<env>/<service>/ beserta kustomization.yaml
 // yang menetapkan namespace dan image. Manifest di deploy/ menulis image sebagai
@@ -26,6 +27,9 @@ def call(Map cfg = [:]) {
   String port = (cfg.port ?: 8080).toString()
   String ns = "${project}-${envName}"
   String repo = "127.0.0.1:5000/${project}/${service}"
+  String SONAR_URL = 'http://127.0.0.1:9000'
+  String SONAR_MAVEN_PLUGIN = '5.8.0.7211'
+  String SONAR_SCANNER_IMAGE = 'sonarsource/sonar-scanner-cli:12.3.1.4302_8.3.1'
 
   pipeline {
     agent any
@@ -56,38 +60,46 @@ def call(Map cfg = [:]) {
       stage('Uji dan bangun (Maven)') {
         when { environment name: 'BUILD_KIND', value: 'maven' }
         steps {
-          script {
-            // settings.xml sementara hanya berisi server `github` untuk GitHub
-            // Packages. Isinya merujuk variabel lingkungan, jadi token tidak
-            // pernah tertulis ke disk; repo yang tidak menarik dari GitHub
-            // Packages tidak memakai server itu sama sekali.
-            String settings = "${pwd(tmp: true)}/maven-settings.xml"
-            writeFile file: settings, text: '''<settings>
-  <servers>
-    <server>
-      <id>github</id>
-      <username>${env.GITHUB_PACKAGES_USER}</username>
-      <password>${env.GITHUB_PACKAGES_TOKEN}</password>
-    </server>
-  </servers>
-</settings>
-'''
-            withCredentials([usernamePassword(credentialsId: 'github-packages',
-                usernameVariable: 'GITHUB_PACKAGES_USER', passwordVariable: 'GITHUB_PACKAGES_TOKEN')]) {
-              if (env.BRANCH_NAME == 'main') {
-                // Jib mendorong image langsung ke registry, tanpa Docker.
-                sh "./mvnw -B -s '${settings}' verify jib:build -Djib.to.image=${repo}:${env.TAG} -Djib.allowInsecureRegistries=true"
-              } else {
-                sh "./mvnw -B -s '${settings}' verify"
-              }
-            }
-          }
+          script { mvn('verify') }
         }
       }
       stage('Bangun image (Dockerfile)') {
         when { environment name: 'BUILD_KIND', value: 'docker' }
         steps {
           sh "docker build -t ${repo}:${env.TAG} ."
+        }
+      }
+      // Quality gate Platform di SonarQube (lihat scripts/sonarqube-init.sh):
+      // scanner menunggu hasil gate, dan build berhenti kalau gate gagal,
+      // sebelum image didorong maupun di-deploy.
+      stage('Analisis SonarQube') {
+        steps {
+          script {
+            String args = "-Dsonar.projectKey=${project}-${service} -Dsonar.projectName=${project}-${service}" +
+                " -Dsonar.host.url=${SONAR_URL} -Dsonar.qualitygate.wait=true"
+            withCredentials([string(credentialsId: 'sonarqube-token', variable: 'SONAR_TOKEN')]) {
+              if (env.BUILD_KIND == 'maven') {
+                mvn("org.sonarsource.scanner.maven:sonar-maven-plugin:${SONAR_MAVEN_PLUGIN}:sonar ${args}")
+              } else {
+                // Workspace ada di volume jenkins_home, bukan di disk host, jadi
+                // scanner meminjam volume itu dari container Jenkins.
+                sh "docker run --rm --network host --volumes-from platform-jenkins -w \"\$WORKSPACE\" -e SONAR_TOKEN" +
+                    " ${SONAR_SCANNER_IMAGE} ${args} -Dsonar.working.directory=\"\$WORKSPACE@tmp/scannerwork\""
+              }
+            }
+          }
+        }
+      }
+      stage('Dorong ke registry (Maven)') {
+        when {
+          allOf {
+            branch 'main'
+            environment name: 'BUILD_KIND', value: 'maven'
+          }
+        }
+        steps {
+          // Jib mendorong image langsung ke registry, tanpa Docker.
+          script { mvn("compile jib:build -Djib.to.image=${repo}:${env.TAG} -Djib.allowInsecureRegistries=true") }
         }
       }
       stage('Uji asap') {
@@ -110,7 +122,7 @@ def call(Map cfg = [:]) {
           """
         }
       }
-      stage('Dorong ke registry') {
+      stage('Dorong ke registry (Dockerfile)') {
         when {
           allOf {
             branch 'main'
@@ -187,6 +199,28 @@ def call(Map cfg = [:]) {
         }
       }
     }
+  }
+}
+
+// Maven memakai settings.xml sementara yang hanya berisi server `github` untuk
+// GitHub Packages. Isinya merujuk variabel lingkungan, jadi token tidak pernah
+// tertulis ke disk; repo yang tidak menarik dari GitHub Packages tidak memakai
+// server itu sama sekali.
+private void mvn(String args) {
+  String settings = "${pwd(tmp: true)}/maven-settings.xml"
+  writeFile file: settings, text: '''<settings>
+  <servers>
+    <server>
+      <id>github</id>
+      <username>${env.GITHUB_PACKAGES_USER}</username>
+      <password>${env.GITHUB_PACKAGES_TOKEN}</password>
+    </server>
+  </servers>
+</settings>
+'''
+  withCredentials([usernamePassword(credentialsId: 'github-packages',
+      usernameVariable: 'GITHUB_PACKAGES_USER', passwordVariable: 'GITHUB_PACKAGES_TOKEN')]) {
+    sh "./mvnw -B -s '${settings}' ${args}"
   }
 }
 

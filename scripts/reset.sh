@@ -66,6 +66,7 @@ if [[ -t 0 ]]; then
   ask POSTGRES_PASSWORD "Postgres, superuser postgres"
   ask MYSQL_ROOT_PASSWORD "MySQL, user root"
   ask REDIS_PASSWORD "Redis, user default"
+  ask SONARQUBE_ADMIN_PASSWORD "SonarQube, user admin (wajib huruf besar, kecil, angka, simbol)"
 fi
 
 echo "== hapus container dan volume"
@@ -81,6 +82,7 @@ declare -A file_of=(
   [POSTGRES_PASSWORD]=env/postgres.env
   [MYSQL_ROOT_PASSWORD]=env/mysql.env
   [REDIS_PASSWORD]=env/redis.env
+  [SONARQUBE_ADMIN_PASSWORD]=env/sonarqube.env
 )
 for key in "${!pw[@]}"; do
   if [[ $key == WEBUI_PASSWORD ]]; then

@@ -84,6 +84,7 @@ hidup, tanpa menunggu k3s, dan tidak bisa dijangkau dari internet.
 | 3000 | Grafana | network host, diikat ke 127.0.0.1; wajib login `admin` |
 | 16686 | tampilan Jaeger | |
 | 4318 | Jaeger, OTLP HTTP | juga di 172.30.0.1 untuk pod |
+| 9000 | SonarQube | wajib login `admin`; kata sandi `SONARQUBE_ADMIN_PASSWORD` di `env/sonarqube.env` |
 
 
 ClusterIP tetap di k3s. Host VPS bisa merutekan alamat ini, jadi PC bisa

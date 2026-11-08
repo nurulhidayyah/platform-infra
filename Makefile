@@ -15,6 +15,7 @@ env: ## Buat env/*.env dari contohnya, dengan kata sandi acak; tidak menimpa
 up: env k8s-token ## Nyalakan backing services, tunggu sampai sehat, siapkan Garage
 	$(COMPOSE) up -d --wait --build
 	@scripts/garage-init.sh
+	@scripts/sonarqube-init.sh
 
 down: ## Matikan backing services; data di volume tetap
 	$(COMPOSE) down

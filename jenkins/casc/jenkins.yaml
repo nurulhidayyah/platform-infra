@@ -75,6 +75,12 @@ credentials:
               username: nurulhidayyah
               password: "${GITHUB_PACKAGES_TOKEN:-}"
               description: "GitHub Packages (read:packages)"
+          # Token analisis global SonarQube, diisi scripts/sonarqube-init.sh.
+          - string:
+              scope: GLOBAL
+              id: sonarqube-token
+              description: "SonarQube, token analisis"
+              secret: "${SONAR_TOKEN:-}"
 
 # Satu folder yang memindai akun GitHub. Setiap repo yang punya Jenkinsfile
 # otomatis menjadi job, dengan satu cabang job per branch dan pull request;

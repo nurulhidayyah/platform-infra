@@ -238,6 +238,55 @@ services:
       - ./jaeger/config.yaml:/etc/jaeger/config.yaml:ro
     mem_limit: 256m
 
+  sonarqube-db:
+    # Sekali jalan: memastikan role dan database sonarqube ada, lalu selesai.
+    image: postgres:16.15-alpine
+    container_name: platform-sonarqube-db
+    restart: "no"
+    env_file:
+      - env/postgres.env
+      - env/sonarqube.env
+    entrypoint: ["sh", "/platform/db-init.sh"]
+    volumes:
+      - ./sonarqube/db-init.sh:/platform/db-init.sh:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  sonarqube:
+    # Analisis kode untuk quality gate di servicePipeline. Admin, quality gate
+    # Platform, dan token Jenkins dipasang scripts/sonarqube-init.sh.
+    image: sonarqube:26.11.0.134175-community
+    container_name: platform-sonarqube
+    restart: unless-stopped
+    env_file: env/sonarqube.env
+    environment:
+      SONAR_JDBC_URL: jdbc:postgresql://platform-postgres:5432/sonarqube
+      SONAR_JDBC_USERNAME: sonarqube
+      SONAR_JDBC_MAXACTIVE: "20"
+      # Elasticsearch bawaan meminta vm.max_map_count 262144, host 65530, dan
+      # mengubahnya butuh sudo. Tanpa mmap batas itu tidak berlaku.
+      SONAR_SEARCH_JAVAADDITIONALOPTS: -Dnode.store.allow_mmap=false
+      SONAR_ES_BOOTSTRAP_CHECKS_DISABLE: "true"
+      SONAR_TELEMETRY_ENABLE: "false"
+    ports:
+      - "127.0.0.1:9000:9000"
+    volumes:
+      - sonarqube_data:/opt/sonarqube/data
+      - sonarqube_extensions:/opt/sonarqube/extensions
+      - sonarqube_logs:/opt/sonarqube/logs
+    # Tiga JVM: web, compute engine, dan Elasticsearch.
+    mem_limit: 2560m
+    depends_on:
+      sonarqube-db:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:9000/api/system/status | grep -q '\"status\":\"UP\"'"]
+      interval: 15s
+      timeout: 5s
+      retries: 20
+      start_period: 120s
+
 volumes:
   postgres_data:
   mysql_data:
@@ -248,6 +297,9 @@ volumes:
   jenkins_home:
   prometheus_data:
   grafana_data:
+  sonarqube_data:
+  sonarqube_extensions:
+  sonarqube_logs:
 
 networks:
   default:
